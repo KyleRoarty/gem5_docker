@@ -1,9 +1,6 @@
 FROM ubuntu:16.04
 
-
 RUN apt-get update && apt-get install -y \
-    apt-utils \
-    amd64-microcode \
     build-essential \
     git \
     m4 \
@@ -17,10 +14,11 @@ RUN apt-get update && apt-get install -y \
     python-dev \
     python
 
+
 WORKDIR /tmp
 RUN git clone https://gem5.googlesource.com/amd/gem5 -b agutierr/master-gcn3-staging \
     && cd gem5 \
     && git status \
-    && scons -j8 ./build/GCN3_X86/gem5.opt
+    && scons -j4 ./build/GCN3_X86/gem5.opt
 
 CMD ["ls"]
