@@ -34,17 +34,10 @@ RUN wget -qO- repo.radeon.com/rocm/archive/apt_1.6.0.tar.bz2 \
     && dpkg -i h/hip_hcc/* \
     && dpkg -i h/hip_samples/*
 
-WORKDIR /sim
-
-RUN git clone https://gem5.googlesource.com/amd/gem5 -b agutierr/master-gcn3-staging \
-    && cd gem5 \
-    && git status \
-    && scons -j4 ./build/GCN3_X86/gem5.opt
-
 ENV ROCM_PATH /opt/rocm
 ENV HCC_HOME ${ROCM_PATH}/hcc
 ENV HSA_PATH ${ROCM_PATH}/hsa
 ENV HIP_PLATFORM hcc
 ENV PATH ${ROCM_PATH}/bin:${PATH}
 
-CMD ["ls"]
+CMD bash

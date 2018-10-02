@@ -1,0 +1,43 @@
+diff --git a/configs/example/apu_se.py b/configs/example/apu_se.py
+index 0e266a6f4..1a2bb4174 100644
+--- a/configs/example/apu_se.py
++++ b/configs/example/apu_se.py
+@@ -455,10 +455,12 @@ if options.env:
+         env = [line.rstrip() for line in f]
+ else:
+     env = ['LD_LIBRARY_PATH=%s' % ':'.join([
+-               "/proj/radl_tools/rocm-1.6/lib",
+-               "/proj/radl_tools/rocm-1.6/hcc/lib64",
+-               "/tool/pandora64/.package/libunwind-1.1/lib",
+-               "/tool/pandora64/.package/gcc-6.4.0/lib64"
++                "/opt/rocm/lib",
++                "/opt/rocm/hcc/lib",
++                "/opt/rocm/hip/lib",
++                "/opt/rocm/hsa/lib",
++                "/opt/rocm/libhsakmt/lib",
++                "/usr/lib/x86_64-linux-gnu"
+            ]),
+            "HSA_ENABLE_INTERRUPT=0"]
+ 
+diff --git a/src/arch/x86/linux/process.cc b/src/arch/x86/linux/process.cc
+index e39b73bc0..d7f8ca358 100644
+--- a/src/arch/x86/linux/process.cc
++++ b/src/arch/x86/linux/process.cc
+@@ -430,7 +430,7 @@ static SyscallDesc syscallDescs64[] = {
+     /* 200 */ SyscallDesc("tkill", unimplementedFunc),
+     /* 201 */ SyscallDesc("time", timeFunc<X86Linux64>),
+     /* 202 */ SyscallDesc("futex", futexFunc<X86Linux64>),
+-    /* 203 */ SyscallDesc("sched_setaffinity", unimplementedFunc),
++    /* 203 */ SyscallDesc("sched_setaffinity", ignoreFunc),
+     /* 204 */ SyscallDesc("sched_getaffinity", ignoreFunc),
+     /* 205 */ SyscallDesc("set_thread_area", unimplementedFunc),
+     /* 206 */ SyscallDesc("io_setup", unimplementedFunc),
+@@ -797,7 +797,7 @@ static SyscallDesc syscallDescs32[] = {
+     /* 238 */ SyscallDesc("tkill", unimplementedFunc),
+     /* 239 */ SyscallDesc("sendfile64", unimplementedFunc),
+     /* 240 */ SyscallDesc("futex", unimplementedFunc),
+-    /* 241 */ SyscallDesc("sched_setaffinity", unimplementedFunc),
++    /* 241 */ SyscallDesc("sched_setaffinity", ignoreFunc),
+     /* 242 */ SyscallDesc("sched_getaffinity", ignoreFunc),
+     /* 243 */ SyscallDesc("set_thread_area", setThreadArea32Func),
+     /* 244 */ SyscallDesc("get_thread_area", unimplementedFunc),
