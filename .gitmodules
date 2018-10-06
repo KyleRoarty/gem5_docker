@@ -2,3 +2,4 @@
 	path = gem5
 	url = https://gem5.googlesource.com/amd/gem5
 	branch = agutierr/master-gcn3-staging
+	ignore = dirty

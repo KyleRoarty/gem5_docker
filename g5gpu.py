@@ -49,7 +49,8 @@ def build(p):
     if p == 'docker':
         cmd = ["docker", "build", "-t", "gem5", "."]
     else:
-        cmd = ["docker", "exec", "py_g5_docker", "scons", "-j4", "/sim/gem5/build/GCN3_X86/gem5.opt"]
+        cmd = ["docker", "exec", "-w", "/sim/gem5", "py_g5_docker",
+               "scons", "-j4", "/sim/gem5/build/GCN3_X86/gem5.opt"]
     ret = subprocess.run(cmd, check=True)
 
 def start():
