@@ -6,6 +6,7 @@
 [submodule "HIP"]
 	path = HIP
 	url = https://github.com/ROCm-Developer-Tools/HIP/
+	ignore = dirty
 [submodule "hipBLAS"]
 	path = hipBLAS
 	url = https://github.com/ROCmSoftwarePlatform/hipBLAS
@@ -18,3 +19,7 @@
 [submodule "MIOpen"]
 	path = MIOpen
 	url = https://github.com/ROCmSoftwarePlatform/MIOpen
+	ignore = dirty
+[submodule "rocm-cmake"]
+	path = rocm-cmake
+	url = https://github.com/Radeonopencompute/rocm-cmake

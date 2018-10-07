@@ -1,0 +1,28 @@
+#docker exec -w/sim/HIP py_g5_docker mkdir -p build
+#docker exec -w/sim/HIP/build py_g5_docker cmake ..
+#docker exec -w/sim/HIP/build py_g5_docker make -j5
+#docker exec -w/sim/HIP/build py_g5_docker make install
+#
+#docker exec -w/sim/rocBLAS py_g5_docker mkdir -p build/release
+#docker exec -w/sim/rocBLAS/build/release -eCXX=/opt/rocm/bin/hcc py_g5_docker cmake ../..
+#docker exec -w/sim/rocBLAS/build/release -eVERBOSE=1 py_g5_docker make -j5
+#docker exec -w/sim/rocBLAS/build/release py_g5_docker make install
+#
+#docker exec -w/sim/hipBLAS py_g5_docker mkdir -p build/release
+#docker exec -w/sim/hipBLAS/build/release -eCXX=/opt/rocm/bin/hcc py_g5_docker cmake ../..
+#docker exec -w/sim/hipBLAS/build/release -eVERBOSE=1 py_g5_docker make -j5
+#docker exec -w/sim/hipBLAS/build/release py_g5_docker make install
+#
+#docker exec -w/sim/rocm-cmake py_g5_docker mkdir -p build
+#docker exec -w/sim/rocm-cmake/build py_g5_docker cmake ..
+#docker exec -w/sim/rocm-cmake/build py_g5_docker cmake --build . --target install
+#
+#docker exec -w/sim/MIOpenGEMM py_g5_docker mkdir -p build
+#docker exec -w/sim/MIOpenGEMM/build py_g5_docker cmake ..
+#docker exec -w/sim/MIOpenGEMM/build py_g5_docker make miopengemm
+#docker exec -w/sim/MIOpenGEMM/build py_g5_docker make install
+
+docker exec -w/sim/MIOpen py_g5_docker mkdir -p build
+docker exec -w/sim/MIOpen/build -eCXX=/opt/rocm/bin/hcc -ehip_DIR=/opt/rocm/hip py_g5_docker cmake -DMIOPEN_BACKEND=HIP -DCMAKE_PREFIX_PATH="/opt/rocm/hcc;/opt/rocm/hip" -DCMAKE_CXX_FLAGS="-isystem /usr/include/x86_64-linux-gnu" ..
+docker exec -w/sim/MIOpen/build -eVERBOSE=1 py_g5_docker make -j5
+docker exec -w/sim/MIOpen/build py_g5_docker make install

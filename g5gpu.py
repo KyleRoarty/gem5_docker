@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import subprocess
+import shlex
 from enum import Enum
 
 class Command(Enum):
@@ -12,6 +13,7 @@ class Command(Enum):
     hipify = 2
     hipcc = 3
     run = 4
+    stop = 5
 
     def __str__(self):
         return self.name
@@ -22,10 +24,11 @@ def parseArgs():
 
     start_parser = subparsers.add_parser('start')
     # No args for start, simply starts container
+    stop_parser = subparsers.add_parser('stop')
 
     build_parser = subparsers.add_parser('build')
     build_parser.add_argument('program',
-                              choices=['docker', 'gem5'])
+                              choices=['docker', 'gem5', 'deps'])
     # No args for build, builds gem5 in docker
 
     hipify_parser = subparsers.add_parser('hipify')
@@ -48,14 +51,30 @@ def parseArgs():
 def build(p):
     if p == 'docker':
         cmd = ["docker", "build", "-t", "gem5", "."]
-    else:
+        ret = subprocess.run(cmd, check=True)
+        start()
+    elif p == 'deps':
+        with open('cmd/deps.txt', 'r') as f:
+            lines = filter(None, (line.rstrip() for line in f))
+            for line in lines:
+                if line[0] == '#':
+                    continue
+                ret = subprocess.run(shlex.split(line), check=True)
+    elif p == 'gem5':
         cmd = ["docker", "exec", "-w", "/sim/gem5", "py_g5_docker",
                "scons", "-j4", "/sim/gem5/build/GCN3_X86/gem5.opt"]
-    ret = subprocess.run(cmd, check=True)
+        ret = subprocess.run(cmd, check=True)
 
 def start():
     # docker run -it -v $(pwd):/sim/ gem5
     cmd = ["docker", "run", "--name", "py_g5_docker", "-it", "-d",  "-v"+os.getcwd()+":/sim/", "gem5"]
+    ret = subprocess.run(cmd, check=True)
+
+def stop():
+    cmd = ["docker", "stop", "py_g5_docker"]
+    ret = subprocess.run(cmd, check=True)
+
+    cmd = ["docker", "rm", "py_g5_docker"]
     ret = subprocess.run(cmd, check=True)
 
 def hipcc(f):
@@ -84,6 +103,8 @@ def main():
         build(pargs.program)
     if cmd == Command.start:
         start()
+    if cmd == Command.stop:
+        stop()
     if cmd == Command.hipcc:
         hipcc(pargs.file)
     if cmd == Command.run:
