@@ -28,7 +28,9 @@ RUN apt-get update && apt-get install -y \
     openssl \
     libssl-dev \
     libboost-filesystem-dev \
-    libboost-system-dev
+    libboost-system-dev \
+    libgflags-dev \
+    libgoogle-glog-dev
 
 WORKDIR /sim
 
@@ -48,6 +50,5 @@ ENV HCC_HOME ${ROCM_PATH}/hcc
 ENV HSA_PATH ${ROCM_PATH}/hsa
 ENV HIP_PLATFORM hcc
 ENV PATH ${ROCM_PATH}/bin:${PATH}
-#ENV LD_LIBRARY_PATH /usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}
 
 CMD bash
