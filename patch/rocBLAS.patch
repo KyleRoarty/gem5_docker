@@ -1,0 +1,24 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ffbac6a..425684e 100755
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -131,7 +131,8 @@ option( BUILD_SHARED_LIBS "Build rocBLAS as a shared library" ON )
+ include( clients/cmake/build-options.cmake )
+ 
+ if( BUILD_WITH_TENSILE )
+-  set( Tensile_LOGIC "mi25_full" CACHE STRING "Tensile to use which logic?")
++  #set( Tensile_LOGIC "mi25_full" CACHE STRING "Tensile to use which logic?")
++  set( Tensile_LOGIC "hip_lite" CACHE STRING "Tensile to use which logic?")
+   set_property( CACHE Tensile_LOGIC PROPERTY STRINGS mi25_full mi25_lite vega10_full vega10_lite r9nano_full r9nano_lite hip_lite other )
+ 
+   option( Tensile_MERGE_FILES "Tensile to merge kernels and solutions files?" ON )
+@@ -171,7 +172,8 @@ if( CMAKE_CXX_COMPILER MATCHES ".*/hcc$" )
+ endif( )
+ 
+ # CMake list of machine targets
+-set( AMDGPU_TARGETS gfx803;gfx900 CACHE STRING "List of specific machine types for library to target" )
++#set( AMDGPU_TARGETS gfx803;gfx900 CACHE STRING "List of specific machine types for library to target" )
++set( AMDGPU_TARGETS gfx803 CACHE STRING "List of specific machine types for library to target" )
+ 
+ add_subdirectory( library )
+ 

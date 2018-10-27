@@ -6,10 +6,10 @@ Date:   Wed Mar 28 15:18:20 2018 -0400
     
     Change-Id: Iefeabc5731a006636d2bf4dc412550ec8153d5e1
 
-diff --git a/benchmarks/hip/dnnMark/core/include/data_manager.h b/benchmarks/hip/dnnMark/core/include/data_manager.h
+diff --git a/core/include/data_manager.h b/core/include/data_manager.h
 index 8b0c1394e..9ea0739e4 100644
---- a/benchmarks/hip/dnnMark/core/include/data_manager.h
-+++ b/benchmarks/hip/dnnMark/core/include/data_manager.h
+--- a/core/include/data_manager.h
++++ b/core/include/data_manager.h
 @@ -30,6 +30,9 @@
  #include "common.h"
  #include "data_png.h"
@@ -50,10 +50,10 @@ index 8b0c1394e..9ea0739e4 100644
    }
    void Filler() {
      png_ = PseudoNumGenerator::GetInstance();
-diff --git a/benchmarks/hip/dnnMark/core/include/data_png.h b/benchmarks/hip/dnnMark/core/include/data_png.h
+diff --git a/core/include/data_png.h b/core/include/data_png.h
 index 584100ec0..665f74e70 100644
---- a/benchmarks/hip/dnnMark/core/include/data_png.h
-+++ b/benchmarks/hip/dnnMark/core/include/data_png.h
+--- a/core/include/data_png.h
++++ b/core/include/data_png.h
 @@ -62,6 +62,7 @@ class PseudoNumGenerator {
      return instance_.get();
    }

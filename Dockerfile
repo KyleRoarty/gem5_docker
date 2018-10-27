@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     libboost-filesystem-dev \
     libboost-system-dev \
+    libboost-dev \
     libgflags-dev \
     libgoogle-glog-dev
 

@@ -1,0 +1,1 @@
+docker exec py_g5_docker /sim/gem5/build/GCN3_X86/gem5.opt /sim/gem5/configs/example/apu_se.py -n2 -c/sim/DNNMark/build/benchmarks/test_fwd_softmax/dnnmark_test_fwd_softmax --options="-config /sim/DNNMark/config_example/softmax_config.dnnmark -debuginfo 1"

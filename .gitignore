@@ -1,3 +1,4 @@
 m5out/*
 venv/*
 *.out
+*.swp

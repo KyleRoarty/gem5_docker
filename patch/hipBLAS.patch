@@ -1,0 +1,14 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ca04378..0d984ef 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -70,7 +70,8 @@ else( )
+ endif( )
+ 
+ # CMake list of machine targets
+-set( AMDGPU_TARGETS gfx803;gfx900 CACHE STRING "List of specific machine types for library to target" )
++#set( AMDGPU_TARGETS gfx803;gfx900 CACHE STRING "List of specific machine types for library to target" )
++set( AMDGPU_TARGETS gfx801 CACHE STRING "List of specific machine types for library to target" )
+ 
+ add_subdirectory( library )
+ 
