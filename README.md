@@ -1,24 +1,46 @@
-## gem5 in docker for machine learning applications
+## gem5 in docker
 ### What does it do?
-Grabs all of the repositories needed to run DNNMark applications on gem5
+The main branch sets up the ROCm environment up to HIP using .deb files available on repo.radeon.com/rocm/archive.
 
-It uses docker to keep the environment in order
+The machine learning branch sets up the ROCm environment up to HCC. The user then needs to build the remaining packages to allow machine learning programs to run. 
 
-There's a wrapper script (g5gpu.py) that I used for common commands that I needed
-
-### How do I build it?
+### Build
 Clone the repo using `git clone --recursive https://github.com/KyleRoarty/gem5_docker.git`\
 Apply the patches in the `patch` directory to the submodule with the same name\
-Run `g5gpu.py build docker` to build the docker image. The dockerfile may need to be updated with more apt packages, I forget\
-Run `g5gpu.py build deps`. This runs all of the commands in `cmd/deps.txt` which are all of those submodules\
-Run `g5gpu.py build gem5` to build gem5, or just build it yourself\
+Build the docker image by running `docker build --build-arg rocm_ver=<version> -t gem5 .` creating a docker image "gem5".\
+This downloads the archive version specified in the build command (or 1.6.0 by default) from repo.radeon.com/rocm/archive, and installs:\
+**Master**
+* hsakmt-roct-dev
+* hsa-ext-rocr-dev
+* hsa-rocr-dev
+* rocm-utils
+* hcc
+* hip_base
+* hip_hcc
+* hip_samples
 
-### How do I use it?
-`g5gpu.py start` and `g5gpu.py stop` start and stop the docker container (stop removes it, too). The container is named `py_g5_docker`  
-The repo directory is bound to `/sim/` in docker  
+**Machine Learning**
+* hsakmt-roct-dev
+* hsa-ext-rocr-dev
+* hsa-rocr-dev
+* rocm-utils
+* hcc
 
-To run something in gem5: `docker exec py_g5_docker /sim/gem5/build/GCN3_X86/gem5.opt /sim/gem5/configs/example/apu_se.py -n2 -c<command> --options="<command options>"`  
+These are installed to /opt/rocm, and environment variables used in ROCm (ROCM_PATH, HCC_HOME, HSA_PATH, HIP_PLATFORM) are set.
 
-### Something doesn't make sense? // TODOs
-I probably installed a program manually in the docker container but failed to add it into the Dockerfile\
-I also forgot to add DNNMark to the submodules. So anything involving DNNMark will break  
+Start a container:\
+`docker run --name <container_name> -it -d -v/gem5/parent/dir:/sim/ gem5`\
+Mapping the parent directory of gem5 to /sim/ in the docker container
+
+**Machine Learning**\
+Build the remaining dependencies manually. The commands to do so are found in cmd/deps.txt
+
+
+Build gem5 in the docker container:\ 
+`docker exec -w/sim/gem5 <container_name> scons -jN /sim/gem5/build/GCN3_X86/gem5.opt`
+
+To run something in gem5:\
+`docker exec <container_name> /sim/gem5/build/GCN3_X86/gem5.opt /sim/gem5/configs/example/apu_se.py -n2 -c<command> --options="<command options>"`  
+
+### Something isn't working?
+* A program may be missing a dependency run `docker exec <container_name> apt-get install -y <package>`
