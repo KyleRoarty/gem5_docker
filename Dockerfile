@@ -35,9 +35,11 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /sim
 
-RUN wget -qO- repo.radeon.com/rocm/archive/apt_1.6.0.tar.bz2 \
+ARG rocm_ver=1.6.0
+
+RUN wget -qO- repo.radeon.com/rocm/archive/apt_${rocm_ver}.tar.bz2 \
     | tar -xjv \
-    && cd apt_1.6.0/debian/pool/main/ \
+    && cd apt_${rocm_ver}/debian/pool/main/ \
     && dpkg -i h/hsakmt-roct-dev/* \
     && dpkg -i h/hsa-ext-rocr-dev/* \
     && dpkg -i h/hsa-rocr-dev/* \
