@@ -23,3 +23,6 @@
 [submodule "rocm-cmake"]
 	path = rocm-cmake
 	url = https://github.com/Radeonopencompute/rocm-cmake
+[submodule "DNNMark"]
+	path = DNNMark
+	url = https://github.com/doody1986/DNNMark
