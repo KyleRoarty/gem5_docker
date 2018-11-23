@@ -36,11 +36,11 @@ Mapping the parent directory of gem5 to /sim/ in the docker container
 Build the remaining dependencies manually. The commands to do so are found in cmd/deps.txt
 
 
-Build gem5 in the docker container:\ 
+Build gem5 in the docker container:\
 `docker exec -w/sim/gem5 <container_name> scons -jN /sim/gem5/build/GCN3_X86/gem5.opt`
 
 To run something in gem5:\
 `docker exec <container_name> /sim/gem5/build/GCN3_X86/gem5.opt /sim/gem5/configs/example/apu_se.py -n2 -c<command> --options="<command options>"`  
 
 ### Something isn't working?
-* A program may be missing a dependency run `docker exec <container_name> apt-get install -y <package>`
+* A program may be missing a dependency: `docker exec <container_name> apt-get install -y <package>`
