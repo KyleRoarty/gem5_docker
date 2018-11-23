@@ -3,18 +3,4 @@
 	url = https://gem5.googlesource.com/amd/gem5
 	branch = agutierr/master-gcn3-staging
 	ignore = dirty
-[submodule "HIP"]
-	path = HIP
-	url = https://github.com/ROCm-Developer-Tools/HIP/
-[submodule "hipBLAS"]
-	path = hipBLAS
-	url = https://github.com/ROCmSoftwarePlatform/hipBLAS
-[submodule "rocBLAS"]
-	path = rocBLAS
-	url = https://github.com/ROCmSoftwarePlatform/rocBLAS/
-[submodule "MIOpenGEMM"]
-	path = MIOpenGEMM
-	url = https://github.com/ROCmSoftwarePlatform/MIOpenGEMM
-[submodule "MIOpen"]
-	path = MIOpen
-	url = https://github.com/ROCmSoftwarePlatform/MIOpen
+
