@@ -1,5 +1,150 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f565a52d..82ae6c73 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -33,16 +33,16 @@ endif()
+ 
+ # Default installation path
+ if(WIN32)
+-    set(CMAKE_INSTALL_PREFIX "/opt/rocm/x86_64-w64-mingw32" CACHE PATH "")
++    set(CMAKE_INSTALL_PREFIX "/p/hal/private/rocm-1.6-gcc540/x86_64-w64-mingw32" CACHE PATH "")
+ else()
+-    set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "")
++    set(CMAKE_INSTALL_PREFIX "/p/hal/private/rocm-1.6-gcc540" CACHE PATH "")
+ endif()
+ 
+ project ( MIOpen C CXX )
+ 
+ enable_testing()
+ 
+-find_package(ROCM REQUIRED PATHS /opt/rocm)
++find_package(ROCM REQUIRED PATHS /p/hal/private/rocm-1.6-gcc540)
+ 
+ include(ROCMInstallTargets)
+ include(ROCMPackageConfigHelpers)
+@@ -90,7 +93,7 @@ endif()
+ option(ENABLE_HIP_WORKAROUNDS Off)
+ if(ENABLE_HIP_WORKAROUNDS)
+     # Add these to CMAKE_PREFIX_PATH to workaround installation problems with hip and hcc
+-    list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hcc /opt/rocm/hip)
++    list(APPEND CMAKE_PREFIX_PATH /p/hal/private/rocm-1.6-gcc540/hcc /p/hal/private/rocm-1.6-gcc540/hip)
+ endif()
+ 
+ set( MIOPEN_BACKEND ${MIOPEN_DEFAULT_BACKEND} CACHE STRING
+@@ -108,7 +111,7 @@ if( MIOPEN_BACKEND STREQUAL "HIP" OR MIOPEN_BACKEND STREQUAL "HIPOC")
+     set(MIOPEN_BACKEND_HIP 1)
+     find_program(HIP_OC_COMPILER clang-ocl
+         PATH_SUFFIXES bin
+-        PATHS /opt/rocm
++        PATHS /p/hal/private/rocm-1.6-gcc540
+     )
+     if(HIP_OC_COMPILER)
+         message(STATUS "hip compiler: ${HIP_OC_COMPILER}")
+@@ -117,24 +120,26 @@ if( MIOPEN_BACKEND STREQUAL "HIP" OR MIOPEN_BACKEND STREQUAL "HIPOC")
+         message(FATAL_ERROR "clang-ocl not found")
+     endif()
+     
+-    find_package(hip REQUIRED PATHS /opt/rocm)
++    find_package(hip REQUIRED PATHS /p/hal/private/rocm-1.6-gcc540)
+     link_libraries(stdc++)
+     # A hack to make this work without the device enumerator
+-    link_libraries(-amdgpu-target=gfx803 -amdgpu-target=gfx900 -Wno-unused-command-line-argument)
++    link_libraries(-amdgpu-target=gfx801 -Wno-unused-command-line-argument)
++    #link_libraries(-amdgpu-target=gfx803 -Wno-unused-command-line-argument)
++    #link_libraries(-amdgpu-target=gfx803 -amdgpu-target=gfx900 -Wno-unused-command-line-argument)
+ endif()
+ message( STATUS "${MIOPEN_BACKEND} backend selected." )
+ 
+ # Online assembler
+ find_program(MIOPEN_AMDGCN_ASSEMBLER
+     NAMES clang
+-    PATHS ${MIOPEN_AMDGCN_ASSEMBLER_PATH} /opt/rocm
++    PATHS ${MIOPEN_AMDGCN_ASSEMBLER_PATH} /p/hal/private/rocm-1.6-gcc540
+     PATH_SUFFIXES /opencl/bin/x86_64
+     NO_DEFAULT_PATH
+ )
+ message(STATUS "AMDGCN assembler: ${MIOPEN_AMDGCN_ASSEMBLER}")
+ 
+ # miopengemm
+-find_package(miopengemm PATHS /opt/rocm)
++find_package(miopengemm PATHS /p/hal/private/rocm-1.6-gcc540)
+ if(miopengemm_FOUND)
+     message(STATUS "Build with miopengemm")
+     set(MIOPEN_USE_MIOPENGEMM 1)
+diff --git a/src/binary_cache.cpp b/src/binary_cache.cpp
+index a83842fd..096b2a56 100644
+--- a/src/binary_cache.cpp
++++ b/src/binary_cache.cpp
+@@ -78,7 +78,13 @@ boost::filesystem::path GetCacheFile(const std::string& device,
+                                      bool is_kernel_str)
+ {
+     std::string filename = (is_kernel_str ? miopen::md5(name) : name) + ".o";
+-    return GetCachePath() / miopen::md5(device + ":" + args) / filename;
++    //return GetCachePath() / miopen::md5(device + ":" + args) / filename;
++    boost::filesystem::path currPath = GetCachePath() /
++      miopen::md5(device + ":" + args) / filename;
++    std::cout << "Device: " << device << ", Cache File: "
++              << currPath.native() << std::endl
++              << std::flush; // ** TEMP: DEBUG ONLY
++    return currPath;
+ }
+ 
+ std::string LoadBinary(const std::string& device,
+@@ -91,10 +97,12 @@ std::string LoadBinary(const std::string& device,
+     auto f = GetCacheFile(device, name, args, is_kernel_str);
+     if(boost::filesystem::exists(f))
+     {
++        //std::cout << "Cache file: " << f.string() << std::endl << std::flush; // ** TEMP: DEBUG ONLY
+         return f.string();
+     }
+     else
+     {
++        std::cout << "Cache file does not exist\n" << std::flush; // ** TEMP: DEBUG ONLY
+         return {};
+     }
+ }
+diff --git a/src/db_record.cpp b/src/db_record.cpp
+index 113bb373..cb938908 100644
+--- a/src/db_record.cpp
++++ b/src/db_record.cpp
+@@ -314,7 +314,7 @@ bool DbRecord::Flush(const RecordPositions* const pos)
+ 
+         if(!file)
+         {
+-            MIOPEN_LOG_E("File is unwritable.");
++            MIOPEN_LOG_E("File " + db_filename + " is unwritable.");
+             return false;
+         }
+ 
+@@ -328,7 +328,7 @@ bool DbRecord::Flush(const RecordPositions* const pos)
+ 
+         if(!from)
+         {
+-            MIOPEN_LOG_E("File is unreadable.");
++            MIOPEN_LOG_E("File " + db_filename + " is unreadable.");
+             return false;
+         }
+ 
+@@ -336,7 +336,7 @@ bool DbRecord::Flush(const RecordPositions* const pos)
+ 
+         if(!to)
+         {
+-            MIOPEN_LOG_E("Temp file is unwritable.");
++            MIOPEN_LOG_E("Temp file " + temp_name + " is unwritable.");
+             return false;
+         }
+ 
+@@ -377,7 +377,7 @@ void DbRecord::ReadFile(RecordPositions* const pos)
+ 
+     if(!file)
+     {
+-        MIOPEN_LOG_W("File is unreadable.");
++        MIOPEN_LOG_W("File " + db_filename + " is unreadable.");
+         return;
+     }
+ 
 diff --git a/src/hip/handlehip.cpp b/src/hip/handlehip.cpp
-index 0d5fef89..578db270 100644
+index 0d5fef89..2cc8248f 100644
 --- a/src/hip/handlehip.cpp
 +++ b/src/hip/handlehip.cpp
 @@ -39,6 +39,9 @@
@@ -12,7 +157,7 @@ index 0d5fef89..578db270 100644
  namespace miopen {
  
  // Get current context
-@@ -64,21 +67,37 @@ std::size_t GetAvailableMemory()
+@@ -64,21 +67,43 @@ std::size_t GetAvailableMemory()
  
  void* default_allocator(void*, size_t sz)
  {
@@ -22,18 +167,23 @@ index 0d5fef89..578db270 100644
          MIOPEN_THROW("Memory not available to allocate buffer: " + std::to_string(sz));
 -    void* result;
      auto status = hipMalloc(&result, sz);
++    //fprintf(stdout, "*** hipMalloc in MIOpen: result: %#lx, &: %#lx ***\n", result, &result); // ** TEMP: DEBUG ONLY
      if(status != hipSuccess)
      {
          status = hipHostMalloc(&result, sz);
++        fprintf(stdout, "*** hipHostMalloc in MIOpen: result: %%#lx, &: %#lx ***\n", result, &result); // ** TEMP: DEBUG ONLY
          if(status != hipSuccess)
              MIOPEN_THROW_HIP_STATUS(status,
                                      "Hip error creating buffer " + std::to_string(sz) + ": ");
      }
 +#else // APU
 +    if (posix_memalign(&result, 64, sz)) {
++      fprintf(stdout, "*** (Error) Cache-line aligned malloc in MIOpen default allocator: %#lx, &: %#lx ***\n", result, &result); // ** TEMP: DEBUG ONLY
 +        MIOPEN_THROW("Error: posix_memalign failed creating buffer " + std::to_string(sz) + ": ");
 +        free(result);
 +        exit(-1);
++    } else {
++      fprintf(stdout, "*** Cache-line aligned malloc in MIOpen default allocator: %#lx, &: %#lx ***\n", result, &result); // ** TEMP: DEBUG ONLY
 +    }
 +#endif // #ifdef DGPU
      return result;
@@ -41,6 +191,7 @@ index 0d5fef89..578db270 100644
  
 -void default_deallocator(void*, void* mem) { hipFree(mem); }
 +void default_deallocator(void*, void* mem) {
++    //fprintf(stdout, "*** hipFree in MIOpen: mem: %#lx, &: %#lx ***\n", mem, &mem); // ** TEMP: DEBUG ONLY
 +#ifdef DGPU
 +    hipFree(mem);
 +#else // APU
@@ -52,10 +203,11 @@ index 0d5fef89..578db270 100644
  
  int get_device_id() // Get random device
  {
-@@ -220,25 +243,49 @@ Allocator::ManageDataPtr&
+@@ -220,25 +245,52 @@ Allocator::ManageDataPtr&
  Handle::WriteTo(const void* data, Allocator::ManageDataPtr& ddata, std::size_t sz)
  {
      this->Finish();
++    //fprintf(stdout, "*** hipMemcpy H2D in MIOpen ***\n"); // ** TEMP: DEBUG ONLY
 +#ifdef DGPU
      auto status = hipMemcpy(ddata.get(), data, sz, hipMemcpyHostToDevice);
      if(status != hipSuccess)
@@ -72,6 +224,7 @@ index 0d5fef89..578db270 100644
  void Handle::ReadTo(void* data, const Allocator::ManageDataPtr& ddata, std::size_t sz)
  {
      this->Finish();
++    //fprintf(stdout, "*** hipMemcpy D2H in MIOpen ***\n"); // ** TEMP: DEBUG ONLY
 +#ifdef DGPU
      auto status = hipMemcpy(data, ddata.get(), sz, hipMemcpyDeviceToHost);
      if(status != hipSuccess)
@@ -88,6 +241,7 @@ index 0d5fef89..578db270 100644
  void Handle::Copy(ConstData_t src, Data_t dest, std::size_t size)
  {
      this->impl->set_ctx();
++    //fprintf(stdout, "*** hipMemcpy D2D in MIOpen ***\n"); // ** TEMP: DEBUG ONLY
 +#ifdef DGPU
      auto status = hipMemcpy(dest, src, size, hipMemcpyDeviceToDevice);
      if(status != hipSuccess)
@@ -102,6 +256,32 @@ index 0d5fef89..578db270 100644
  }
  
  KernelInvoke Handle::GetKernel(const std::string& algorithm,
+diff --git a/src/hipoc/hipoc_kernel.cpp b/src/hipoc/hipoc_kernel.cpp
+index c39e7d4f..8ab0b45c 100644
+--- a/src/hipoc/hipoc_kernel.cpp
++++ b/src/hipoc/hipoc_kernel.cpp
+@@ -55,7 +55,7 @@ void HIPOCKernelInvoke::run(void* args, std::size_t size) const
+     }
+ 
+     // std::cerr << "Launch kernel: " << name << std::endl;
+-
++    std::cout << "Launch kernel: " << name << std::endl << std::flush; // ** TEMP: DEBUG ONLY
+     auto status = hipHccModuleLaunchKernel(fun,
+                                            gdims[0],
+                                            gdims[1],
+diff --git a/src/kernels/MIOpenNeuron.cl b/src/kernels/MIOpenNeuron.cl
+index b85624f2..72a266d0 100644
+--- a/src/kernels/MIOpenNeuron.cl
++++ b/src/kernels/MIOpenNeuron.cl
+@@ -548,7 +548,7 @@ MIOpenNeuronBwd(__global _FLOAT* bot_diff,
+         }
+     }
+     else
+-#endif
++#endif
+     {
+         for(int i = 0; i < MLO_READ_UNIT; ++i)
+         {
 diff --git a/src/kernels/conv3x3.s b/src/kernels/conv3x3.s
 index b00dfb9d..260dd79c 100644
 --- a/src/kernels/conv3x3.s
@@ -116,6 +296,133 @@ index b00dfb9d..260dd79c 100644
  
  .text
  .globl gcnAsmConv3x3U
+
+diff --git a/src/ocl/gcn_asm_utils.cpp b/src/ocl/gcn_asm_utils.cpp
+index f8bc8f6a..f7ac93ac 100644
+--- a/src/ocl/gcn_asm_utils.cpp
++++ b/src/ocl/gcn_asm_utils.cpp
+@@ -136,6 +136,11 @@ std::string GetGcnAssemblerPath()
+ bool ValidateGcnAssemblerImpl()
+ {
+ #ifdef __linux__
++  // ** TEST
++  // clang doesn't properly detect that we have the assembler installed,
++  // but we do, so just return true
++  return true;
++  /*
+     const auto path = GetGcnAssemblerPath();
+     if(path.empty())
+     {
+@@ -163,10 +168,14 @@ bool ValidateGcnAssemblerImpl()
+             std::getline(clang_stdout, clang_result_line);
+             if(clang_result_line.find("Target: ") != std::string::npos)
+             {
++                bool foundAMDGcn = clang_result_line.find("amdgcn") != std::string::npos;
++                std::cout << "Found amdgcn in clang version output?: "
++                          << foundAMDGcn << std::endl; // ** TEMP: DEBUG ONLY
+                 return clang_result_line.find("amdgcn") != std::string::npos;
+             }
+         }
+     }
++  */
+ #endif // __linux__
+     return false;
+ }
+@@ -186,6 +195,7 @@ static int ExecuteGcnAssembler(const std::string& p, std::istream* in, std::ostr
+     assert(!(redirect_stdin && redirect_stdout));
+ 
+     const auto file_mode = redirect_stdout ? "r" : "w";
++    std::cout << "ExecuteGcnAssembler(): p: " << p << std::endl; // ** TEMP: DEBUG ONLY
+     MIOPEN_MANAGE_PTR(FILE*, pclose) pipe{popen(p.c_str(), file_mode)};
+ 
+     if(!pipe)
+@@ -308,6 +318,7 @@ void AmdgcnAssemble(std::string& source, const std::string& params)
+ 
+ static void AmdgcnAssemble4BugDetection(std::string& source, const std::string& params)
+ {
++    std::cout << "Checking for bug detection\n"; // ** TEMP: DEBUG ONLY
+ #ifdef __linux__
+     std::stringstream clang_stdout_unused;
+     const auto clang_path = GetGcnAssemblerPath();
+@@ -332,7 +343,8 @@ static bool GcnAssemblerHasBug34765Impl()
+     auto src = p.string();
+     try
+     {
+-        AmdgcnAssemble4BugDetection(src, "-mcpu=gfx900");
++//        AmdgcnAssemble4BugDetection(src, "-mcpu=gfx900");
++        AmdgcnAssemble4BugDetection(src, "-mcpu=gfx801");
+         return false;
+     }
+     catch(...)
+@@ -344,7 +356,12 @@ static bool GcnAssemblerHasBug34765Impl()
+ 
+ bool GcnAssemblerHasBug34765()
+ {
++
++    /*
++      // ** TEST: We're using ROCm 1.6, so we have the bug
+     const static bool b = GcnAssemblerHasBug34765Impl();
++    */
++    const static bool b = true;
+     return b;
+ }
+ 
+diff --git a/src/rnn.cpp b/src/rnn.cpp
+index c5f67ef0..9591e226 100644
+--- a/src/rnn.cpp
++++ b/src/rnn.cpp
+@@ -34,7 +34,7 @@
+ // Disable specific warnings
+ #define MIO_RNN_DEBUG 0
+ 
+-#define MIOPEN_RNN_SYNCH 0
++#define MIOPEN_RNN_SYNCH /*0*/ 1
+ #define MIO_RNN_CPP_PROF 0
+ 
+ namespace miopen {
+diff --git a/src/solver/conv_ocl_dir2Dfwd_exhaustive_search.cpp b/src/solver/conv_ocl_dir2Dfwd_exhaustive_search.cpp
+index 594c6619..fe2917ac 100644
+--- a/src/solver/conv_ocl_dir2Dfwd_exhaustive_search.cpp
++++ b/src/solver/conv_ocl_dir2Dfwd_exhaustive_search.cpp
+@@ -32,6 +32,7 @@
+ #include <miopen/legacy_exhaustive_search.hpp>
+ #include <miopen/mlo_utils.hpp>
+ #include <miopen/solver.hpp>
++#include <chrono>
+ #ifdef max
+ #undef max
+ #endif
+@@ -241,7 +242,10 @@ static int MeasureLoop(Handle* profile_h,
+ 
+             params.GetStream().Finish();
+ 
+-            s = miopen_mach_absolute_time();
++            //s = miopen_mach_absolute_time();
++            // gem5 needs deterministic timer instead, this timer is
++            // implemented and is a user space call
++            auto kernelStart = std::chrono::steady_clock::now();
+ 
+             for(int i = 0; i < iter && ret == 0; i++)
+             {
+@@ -256,9 +260,15 @@ static int MeasureLoop(Handle* profile_h,
+             }
+ 
+             params.GetStream().Finish();
+-            e = miopen_mach_absolute_time();
+-
+-            processing_time = subtractTimes(e, s) / iter;
++            //e = miopen_mach_absolute_time();
++            // gem5 needs deterministic timer instead, this timer is
++            // implemented and is a user space call
++            auto kernelStop = std::chrono::steady_clock::now();
++
++            //processing_time = subtractTimes(e, s) / iter;
++            std::chrono::duration<double> kernelTime = (kernelStop -
++                                                        kernelStart);
++            processing_time = kernelTime.count() / iter;
+         }
+     }
+     catch(miopen::Exception&)
 diff --git a/src/tmp_dir.cpp b/src/tmp_dir.cpp
 index ac27c782..e417d832 100644
 --- a/src/tmp_dir.cpp
