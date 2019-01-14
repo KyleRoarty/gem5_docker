@@ -20,10 +20,13 @@ RUN apt-get update && apt-get install -y \
     libelf1 \
     vim
 
-WORKDIR /sim
+# Get files needed for gem5, apply patches, build
+RUN git clone --single-branch --branch agutierr/master-gcn3-staging https://gem5.googlesource.com/amd/gem5
+COPY gem5.patch .
+RUN git apply gem5.patch --directory=gem5
+RUN rm gem5.patch
 
 ARG rocm_ver=1.6.0
-
 RUN wget -qO- repo.radeon.com/rocm/archive/apt_${rocm_ver}.tar.bz2 \
     | tar -xjv \
     && cd apt_${rocm_ver}/debian/pool/main/ \
@@ -41,5 +44,10 @@ ENV HCC_HOME ${ROCM_PATH}/hcc
 ENV HSA_PATH ${ROCM_PATH}/hsa
 ENV HIP_PLATFORM hcc
 ENV PATH ${ROCM_PATH}/bin:${PATH}
+
+WORKDIR gem5
+RUN scons -j8 build/GCN3_X86/gem5.opt
+
+WORKDIR wrk
 
 CMD bash
