@@ -44,4 +44,4 @@ ENV HSA_PATH ${ROCM_PATH}/hsa
 ENV HIP_PLATFORM hcc
 ENV PATH ${ROCM_PATH}/bin:${PATH}
 
-CMD cd /gem5 && scons -j9 build/GCN3_X86/gem5.opt
+CMD bash
