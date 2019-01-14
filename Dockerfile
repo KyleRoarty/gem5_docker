@@ -101,8 +101,15 @@ WORKDIR /MIOpenGEMM/build
 RUN cmake .. && make miopengemm && make install
 
 WORKDIR /MIOpen/build
-RUN CXX=/opt/rocm/hcc/bin/hcc cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/opt/rocm -DMIOPEN_BACKEND=HIP -DCMAKE_PREFIX_PATH="/opt/rocm/hip;/opt/rocm/hcc;/opt/rocm/rocdl;/opt/rocm/miopengemm;/opt/rocm/hsa" -DMIOPEN_CACHE_DIR=/sim/.cache/miopen -DMIOPEN_AMDGCN_ASSEMBLER_PATH=/opt/rocm/opencl/bin -DCMAKE_CXX_FLAGS="-isystem /usr/include/x86_64-linux-gnu" .. && \
+RUN CXX=/opt/rocm/hcc/bin/hcc cmake \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_INSTALL_PREFIX=/opt/rocm \
+    -DMIOPEN_BACKEND=HIP \
+    -DCMAKE_PREFIX_PATH="/opt/rocm/hip;/opt/rocm/hcc;/opt/rocm/rocdl;/opt/rocm/miopengemm;/opt/rocm/hsa" \
+    -DMIOPEN_CACHE_DIR=/sim/.cache/miopen \
+    -DMIOPEN_AMDGCN_ASSEMBLER_PATH=/opt/rocm/opencl/bin \
+    -DCMAKE_CXX_FLAGS="-isystem /usr/include/x86_64-linux-gnu" .. && \
     make -j9 && make install
 
 WORKDIR /
-CMD cd gem5 && scons -j9 build/GCN3_X86/gem5.opt
+CMD bash
