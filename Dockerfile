@@ -44,4 +44,6 @@ ENV HSA_PATH ${ROCM_PATH}/hsa
 ENV HIP_PLATFORM hcc
 ENV PATH ${ROCM_PATH}/bin:${PATH}
 
+COPY run_tests.sh .
+
 CMD bash
