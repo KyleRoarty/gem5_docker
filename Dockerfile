@@ -49,7 +49,7 @@ RUN git clone --single-branch https://github.com/RadeonOpenCompute/rocm-cmake/
 # Get and apply patches to various repos
 COPY patch /patch
 
-RUN git -C /gem5/ apply /patch/gpusyscall.patch
+RUN git -C /gem5/ apply /patch/gem5.patch
 RUN git -C /HIP/ checkout 0e3d824e && git -C /HIP/ apply /patch/hip.patch
 RUN git -C /hipBLAS/ checkout ee57787e && git -C /hipBLAS/ apply /patch/hipBLAS.patch
 RUN git -C /rocBLAS/ checkout cbff4b4e && git -C /rocBLAS/ apply /patch/rocBLAS.patch
