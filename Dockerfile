@@ -41,10 +41,10 @@ RUN wget -qO- repo.radeon.com/rocm/archive/apt_${rocm_ver}.tar.bz2 \
 ENV ROCM_PATH /opt/rocm
 ENV HCC_HOME ${ROCM_PATH}/hcc
 ENV HSA_PATH ${ROCM_PATH}/hsa
+ENV HIP_PATH ${ROCM_PATH}/hip
 ENV HIP_PLATFORM hcc
-ENV PATH ${ROCM_PATH}/bin:${PATH}
+ENV PATH ${ROCM_PATH}/bin:${HCC_HOME}/bin:${HSA_PATH}/bin:${HIP_PATH}/bin:${PATH}
 
-COPY run_tests.sh tests/
-COPY square.cpp tests/
+COPY tests/ tests/
 
 CMD bash
