@@ -25,7 +25,7 @@ RUN git clone --single-branch --branch agutierr/master-gcn3-staging https://gem5
 COPY gem5.patch .
 RUN git apply gem5.patch --directory=gem5
 
-ARG rocm_ver=1.6.4
+ARG rocm_ver=1.6.3
 RUN wget -qO- repo.radeon.com/rocm/archive/apt_${rocm_ver}.tar.bz2 \
     | tar -xjv \
     && cd apt_${rocm_ver}/pool/main/ \
