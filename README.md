@@ -1,46 +1,41 @@
-## gem5 in docker
-### What does it do?
-The main branch sets up the ROCm environment up to HIP using .deb files available on repo.radeon.com/rocm/archive.
+## gem5 in docker for machine learning
+### What is it?
+This builds a docker image that contains gem5, ROCm, and MIOpen (using HIP). It's intended for running machine learning programs in the APU model in the GCN3 branch of gem5.
 
-The machine learning branch sets up the ROCm environment up to HCC. The user then needs to build the remaining packages to allow machine learning programs to run. 
+The container uses ROCm 1.6.2; This can be overridden when building the docker image.
 
-### Build
-Clone the repo using `git clone --recursive https://github.com/KyleRoarty/gem5_docker.git`\
-Apply the patches in the `patch` directory to the submodule with the same name\
-Build the docker image by running `docker build --build-arg rocm_ver=<version> -t gem5 .` creating a docker image "gem5".\
-This downloads the archive version specified in the build command (or 1.6.0 by default) from repo.radeon.com/rocm/archive, and installs:\
-**Master**
-* hsakmt-roct-dev
-* hsa-ext-rocr-dev
-* hsa-rocr-dev
-* rocm-utils
-* hcc
-* hip_base
-* hip_hcc
-* hip_samples
+### How to build/run?
+[The dockerhub repo](https://cloud.docker.com/repository/registry-1.docker.io/kroarty/gem5) Will contain an image for this branch soon. Currently it only has the non-ML-enabled image.
 
-**Machine Learning**
-* hsakmt-roct-dev
-* hsa-ext-rocr-dev
-* hsa-rocr-dev
-* rocm-utils
-* hcc
+From source:
+```
+docker build [--build-arg rocm_ver=<version>] -t <im_name> .
+docker run [--name <container_name>] -it [-d] <im_name> [<command>]
+```
+If '-d' is specified, the container will run in the background \
+If '\<command\>' isn't specified, the container will run a bash shell
 
-These are installed to /opt/rocm, and environment variables used in ROCm (ROCM_PATH, HCC_HOME, HSA_PATH, HIP_PLATFORM) are set.
+### Building gem5 in the container
 
-Start a container:\
-`docker run --name <container_name> -it -d -v/gem5/parent/dir:/sim/ gem5`\
-Mapping the parent directory of gem5 to /sim/ in the docker container
+To keep filesize down, gem5 is not pre-built. So on the initial run of a container, gem5 needs to be built.
 
-**Machine Learning**\
-Build the remaining dependencies manually. The commands to do so are found in cmd/deps.txt
+When attached to the container:
+```
+cd /gem5
+scons -j$(nproc) build/GCN3_X86/gem5.opt --ignore-style
+```
+When running the container in the background:
+`docker exec -w/gem5 <container_name> scons -j$(nproc) /sim/gem5/build/GCN3_X86/gem5.opt --ignore-style`
 
+### Misc
 
-Build gem5 in the docker container:\
-`docker exec -w/sim/gem5 <container_name> scons -jN /sim/gem5/build/GCN3_X86/gem5.opt`
+* Why ROCm 1.6.2?
 
-To run something in gem5:\
-`docker exec <container_name> /sim/gem5/build/GCN3_X86/gem5.opt /sim/gem5/configs/example/apu_se.py -n2 -c<command> --options="<command options>"`  
+It's the most recent of the 1.6.x version that doesn't crash when running DNNMark's fwd_softmax test.
+* Why can't we use ROCm 1.6.0?
 
-### Something isn't working?
-* A program may be missing a dependency: `docker exec <container_name> apt-get install -y <package>`
+It unpacks into a different directory structure than 1.6.1-1.6.4; This can be changed in the dockerfile, line 31. After ${rocm_ver}, add '/debian' and it will build
+
+### ToDo
+* Check dependencies, if any more are needed or if any can be removed
+* Allow building with docker-compose
