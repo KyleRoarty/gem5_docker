@@ -1,8 +1,8 @@
 diff --git a/configs/example/apu_se.py b/configs/example/apu_se.py
-index 0e266a6f4..1a2bb4174 100644
+index 0e266a6f4..1f41351ca 100644
 --- a/configs/example/apu_se.py
 +++ b/configs/example/apu_se.py
-@@ -455,10 +455,12 @@ if options.env:
+@@ -455,11 +455,18 @@ if options.env:
          env = [line.rstrip() for line in f]
  else:
      env = ['LD_LIBRARY_PATH=%s' % ':'.join([
@@ -15,10 +15,16 @@ index 0e266a6f4..1a2bb4174 100644
 +                "/opt/rocm/hip/lib",
 +                "/opt/rocm/hsa/lib",
 +                "/opt/rocm/libhsakmt/lib",
-+                "/usr/lib/x86_64-linux-gnu"
++                "/usr/lib/x86_64-linux-gnu",
++                "/opt/rocm/miopen/lib",
++                "/opt/rocm/miopengemm/lib",
++                "/opt/rocm/hipblas/lib",
++                "/opt/rocm/rocblas/lib"
             ]),
++           'HOME=%s' % os.environ.get('HOME'),
             "HSA_ENABLE_INTERRUPT=0"]
  
+ process = Process(executable = executable, cmd = [options.cmd]
 diff --git a/src/arch/x86/linux/process.cc b/src/arch/x86/linux/process.cc
 index e39b73bc0..d7f8ca358 100644
 --- a/src/arch/x86/linux/process.cc
