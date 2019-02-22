@@ -12,6 +12,7 @@ fi
 # Get DNNMark and build
 git clone https://github.com/doody1986/DNNMark.git
 cd DNNMark/
+git checkout 4c0497b5
 git apply ../dnnmark.patch
 ./setup.sh HIP
 cd build
