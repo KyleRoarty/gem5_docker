@@ -31,9 +31,12 @@ When running the container in the background:
 ### Tests
 
 ```
+export UID
 docker-compose -f docker-compose.test.yml -p <name> build
 docker-compose -f docker-compose.test.yml -p <name> up
 ```
+The first line is needed to allow the container to run in non-root mode
+
 
 To clean up the container used for tests:
 ```
