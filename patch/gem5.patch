@@ -21,7 +21,7 @@ index 0e266a6f4..1f41351ca 100644
 +                "/opt/rocm/hipblas/lib",
 +                "/opt/rocm/rocblas/lib"
             ]),
-+           "HOME=/sim/",
++           'HOME=%s' % os.environ.get('HOME'),
             "HSA_ENABLE_INTERRUPT=0"]
  
  process = Process(executable = executable, cmd = [options.cmd]

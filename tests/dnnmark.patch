@@ -1,0 +1,108 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 657518f..991ea96 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -181,7 +181,7 @@ elseif(HCC_FOUND AND ${HCC_ENABLE})
+   message(STATUS "DNNMark Source files: " ${DNNMARK_SOURCES})
+ 
+   # Find rocBLAS libraries
+-  find_library(ROCBLAS_LIBRARY rocblas-hcc ${ROCBLAS_ROOT}/lib)
++  find_library(ROCBLAS_LIBRARY rocblas ${ROCBLAS_ROOT}/lib)
+ 
+   # Find MIOpen libraries
+   find_library(MIOPEN_LIBRARY MIOpen ${MIOPEN_ROOT}/lib)
+diff --git a/core/include/data_manager.h b/core/include/data_manager.h
+index 71bbade..e997aea 100644
+--- a/core/include/data_manager.h
++++ b/core/include/data_manager.h
+@@ -30,6 +30,9 @@
+ #include "common.h"
+ #include "data_png.h"
+ 
++// if set, then use discrete GPU memory management
++//#define DGPU
++
+ namespace dnnmark {
+ 
+ template <typename T>
+@@ -42,22 +45,30 @@ class Data {
+   Data(size_t size)
+   : size_(size) {
+     LOG(INFO) << "Create Data chunk of size " << size_;
++#ifdef DGPU
+ #ifdef NVIDIA_CUDNN
+     CUDA_CALL(cudaMalloc(&gpu_ptr_, size * sizeof(T)));
+ #endif
+ #ifdef AMD_MIOPEN
+     HIP_CALL(hipMalloc(&gpu_ptr_, size * sizeof(T)));
+ #endif
++#else // APU
++    gpu_ptr_ = (T *)malloc(size * sizeof(T));
++#endif // #ifdef DGPU
+   }
+   ~Data() {
+     LOG(INFO) << "Free Data chunk of size " << size_;
+     if (size_ > 0) {
++#ifdef DGPU
+ #ifdef NVIDIA_CUDNN
+       CUDA_CALL(cudaFree(gpu_ptr_));
+ #endif
+ #ifdef AMD_MIOPEN
+       HIP_CALL(hipFree(gpu_ptr_));
+ #endif
++#else // APU
++    free(gpu_ptr_);
++#endif // #ifdef DGPU
+     }
+   }
+   void Filler() {
+diff --git a/core/include/data_png.h b/core/include/data_png.h
+index 584100e..86efada 100644
+--- a/core/include/data_png.h
++++ b/core/include/data_png.h
+@@ -62,6 +62,7 @@ class PseudoNumGenerator {
+     return instance_.get();
+   }
+   void GenerateUniformData(float *dev_ptr, int size) {
++#ifdef DGPU
+ #ifdef NVIDIA_CUDNN
+     CURAND_CALL(curandGenerateUniform(gen_, dev_ptr, size));
+ #endif
+@@ -75,8 +76,14 @@ class PseudoNumGenerator {
+     delete []host_ptr;
+     
+ #endif
++#else // APU
++    for (int i = 0; i < size; i++)
++        dev_ptr[i] = static_cast <float> (rand()) /
++                        (static_cast <float> (RAND_MAX/seed));
++#endif // #ifdef DGPu
+   }
+   void GenerateUniformData(double *dev_ptr, int size) {
++#ifdef DGPU
+ #ifdef NVIDIA_CUDNN
+     CURAND_CALL(curandGenerateUniformDouble(gen_, dev_ptr, size));
+ #endif
+@@ -89,6 +96,11 @@ class PseudoNumGenerator {
+                        hipMemcpyHostToDevice));
+     delete []host_ptr;
+ #endif
++#else // APU
++    for (int i = 0; i < size; i++)
++        dev_ptr[i] = static_cast <double> (rand()) /
++                        (static_cast <double> (RAND_MAX/seed));
++#endif // #ifdef DGPU
+   }  
+ };
+ 
+diff --git a/setup.sh b/setup.sh
+index 30baf95..e8de6c5 100755
+--- a/setup.sh
++++ b/setup.sh
+@@ -27,5 +27,6 @@ then
+     -DHCC_ENABLE=ON \
+     -DMIOPEN_ROOT=${MIOPEN_PATH} \
+     -DROCBLAS_ROOT=${ROCBLAS_PATH} \
++    -DCMAKE_CXX_FLAGS="--amdgpu-target=gfx801" \
+     ..
+ fi
