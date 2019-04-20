@@ -1,5 +1,27 @@
+diff --git a/configs/common/FileSystemConfig.py b/configs/common/FileSystemConfig.py
+index a29c74e..d61e701 100644
+--- a/configs/common/FileSystemConfig.py
++++ b/configs/common/FileSystemConfig.py
+@@ -55,7 +55,7 @@ def shm_cleanup_warn(func, path, exc):
+ 
+ def cleanup_filesystem(options):
+     # only thing to cleanup for now is /dev/shm allocation
+-    shmdir = joinpath('/dev', 'shm', getpass.getuser(), 'gem5_%s' % getpid())
++    shmdir = joinpath('/dev', 'shm', str(os.getuid()), 'gem5_%s' % getpid())
+     if isdir(shmdir):
+         # If this isn't my directory, I can't delete it and that shouldn't be
+         # a failure condition, but should emit some sort of warning.
+@@ -121,7 +121,7 @@ def config_filesystem(options):
+     replace_tree(tmpdir)
+ 
+     # Allocte a shm region from /dev/shm
+-    shmdir = joinpath('/dev', 'shm', getpass.getuser(), 'gem5_%s' % getpid())
++    shmdir = joinpath('/dev', 'shm', str(os.getuid()), 'gem5_%s' % getpid())
+     if isdir(shmdir):
+         # This should not happen if the directory was cleaned properly from a
+         # previous run.  However, if it does, it's not a show stopper unless
 diff --git a/configs/example/apu_se.py b/configs/example/apu_se.py
-index 0e266a6f4..1f41351ca 100644
+index 0e266a6..da6081b 100644
 --- a/configs/example/apu_se.py
 +++ b/configs/example/apu_se.py
 @@ -455,11 +455,18 @@ if options.env:
@@ -21,12 +43,21 @@ index 0e266a6f4..1f41351ca 100644
 +                "/opt/rocm/hipblas/lib",
 +                "/opt/rocm/rocblas/lib"
             ]),
-+           'HOME=%s' % os.environ.get('HOME'),
++           'HOME=%s' % os.getcwd(),
             "HSA_ENABLE_INTERRUPT=0"]
  
  process = Process(executable = executable, cmd = [options.cmd]
+@@ -619,7 +626,7 @@ redirect_paths = [RedirectPath(src = "/proc",
+                                dests = ["%s/fs/tmp"  % m5.options.outdir]),
+                   RedirectPath(src = "/dev/shm",
+                                dests = ["/dev/shm/%s/gem5_%s"  %
+-                                   (getpass.getuser(), os.getpid())])]
++                                   (str(os.getuid()), os.getpid())])]
+ 
+ system.redirect_paths = redirect_paths
+ 
 diff --git a/src/arch/x86/linux/process.cc b/src/arch/x86/linux/process.cc
-index e39b73bc0..d7f8ca358 100644
+index e39b73b..d7f8ca3 100644
 --- a/src/arch/x86/linux/process.cc
 +++ b/src/arch/x86/linux/process.cc
 @@ -430,7 +430,7 @@ static SyscallDesc syscallDescs64[] = {

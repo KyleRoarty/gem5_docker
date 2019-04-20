@@ -41,7 +41,7 @@ RUN apt-get update && apt-get install -y \
 ARG rocm_ver=1.6.2
 
 # Get files needed for gem5, and apply patches
-RUN git clone --single-branch --branch agutierr/master-gcn3-staging https://gem5.googlesource.com/amd/gem5
+RUN git clone --single-branch --branch agutierr/master-gcn3-staging https://gem5.googlesource.com/amd/gem5 && chmod 777 /gem5
 
 RUN git clone --single-branch https://github.com/ROCm-Developer-Tools/HIP/
 RUN git clone --single-branch https://github.com/ROCmSoftwarePlatform/hipBLAS/
@@ -106,6 +106,8 @@ RUN cmake .. && cmake --build . --target install
 WORKDIR /MIOpenGEMM/build
 RUN cmake .. && make miopengemm && make install
 
+RUN mkdir -p /.cache/miopen && chmod 777 /.cache/miopen
+
 WORKDIR /MIOpen/build
 RUN CXX=/opt/rocm/hcc/bin/hcc cmake \
     -DCMAKE_BUILD_TYPE=Debug \
@@ -117,7 +119,11 @@ RUN CXX=/opt/rocm/hcc/bin/hcc cmake \
     -DCMAKE_CXX_FLAGS="-isystem /usr/include/x86_64-linux-gnu" .. && \
     make -j$(nproc) && make install
 
+WORKDIR /gem5
+RUN scons -j$(nproc) build/GCN3_X86/gem5.opt --ignore-style
+
 WORKDIR /
 
+RUN mkdir /tmp2 && chmod 777 /tmp2
 COPY tests/ tests/
 CMD bash

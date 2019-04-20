@@ -3,20 +3,23 @@
 cd /tests
 
 # Validate hipcc works
-hipcc square.cpp -o square.out --amdgpu-target=gfx801
+hipcc square.cpp -o /tmp/square.out --amdgpu-target=gfx801
 ret=$?
 if [ $ret -ne 0 ]; then
     exit 1
 fi
 
+cd /tmp2
 # Get DNNMark and build
 git clone https://github.com/doody1986/DNNMark.git
 cd DNNMark/
-git checkout 4c0497b5
-git apply ../dnnmark.patch
+git checkout 4c0497b
+git apply /tests/dnnmark.patch
 ./setup.sh HIP
 cd build
-make
+make -j$(nproc)
+
+ls -la /
 
 # Get the file needed for the DNNMark fwd_softmax
 # fwd_softmax requires a softmax file placed in the directory made below
@@ -29,7 +32,7 @@ cd /MIOpen/src/kernels
     MIOpenSoftmax.cl \
     -o /.cache/miopen/1.2.0/8cc7cb244c7ad66444adf4fb7d8b94f1/MIOpenSoftmax.cl.o
 ret=$?
-if [ $ret -ne 0]; then
+if [ $ret -ne 0 ]; then
     exit 1
 fi
 
@@ -45,18 +48,25 @@ fi
 # Test that square works in gem5.
 build/GCN3_X86/gem5.opt configs/example/apu_se.py \
                         -n2 \
-                        --benchmark-root=/tests -csquare.out
+                        --benchmark-root=/tmp -csquare.out
 ret=$?
 if [ $ret -ne 0 ]; then
     exit 1
 fi
 
+ls /tmp2/DNNMark
 # Run fwd_softmax benchmark with default config
 build/GCN3_X86/gem5.opt configs/example/apu_se.py \
             -n2 \
-            --benchmark-root=/tests/DNNMark/build/benchmarks/test_fwd_softmax \
+            --benchmark-root=/bin \
+            -cls \
+            --options="/gem5/../tmp2/DNNMark/build"
+
+build/GCN3_X86/gem5.opt configs/example/apu_se.py \
+            -n2 \
+            --benchmark-root=/tmp2/DNNMark/build/benchmarks/test_fwd_softmax \
             -cdnnmark_test_fwd_softmax \
-            --options="-config /tests/DNNMark/config_example/softmax_config.dnnmark -debuginfo 1"
+            --options="-config /tmp2/DNNMark/config_example/softmax_config.dnnmark -debuginfo 1"
 ret=$?
 if [ $ret -ne 0 ]; then
     exit 1
