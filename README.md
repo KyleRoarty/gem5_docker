@@ -30,13 +30,14 @@ When running the container in the background:
 ### Tests
 
 ```
-docker-compose -f docker-compose.test.yml -p <name> build
-docker-compose -f docker-compose.test.yml -p <name> up
+export UID
+docker-compose -f docker-compose.test.yml [-p <name>] build
+docker-compose -f docker-compose.test.yml [-p <name>] up
 ```
 
 To clean up the container used for tests:
 ```
-docker-compose -f docker-compose.test.yml -p <name> down
+docker-compose -f docker-compose.test.yml [-p <name>] down
 ```
 
 ### Misc
