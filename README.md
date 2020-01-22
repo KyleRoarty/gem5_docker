@@ -32,15 +32,15 @@ When running the container in the background:
 
 ```
 export UID
-docker-compose -f docker-compose.test.yml -p <name> build
-docker-compose -f docker-compose.test.yml -p <name> up
+docker-compose -f docker-compose.test.yml [-p <name>] build
+docker-compose -f docker-compose.test.yml [-p <name>] up
 ```
 The first line is needed to allow the container to run in non-root mode
 
 
 To clean up the container used for tests:
 ```
-docker-compose -f docker-compose.test.yml -p <name> down
+docker-compose -f docker-compose.test.yml [-p <name>] down
 ```
 
 ### Misc
