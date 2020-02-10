@@ -2,50 +2,11 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 index f565a52..3973652 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -33,16 +33,16 @@ endif()
- 
- # Default installation path
- if(WIN32)
--    set(CMAKE_INSTALL_PREFIX "/opt/rocm/x86_64-w64-mingw32" CACHE PATH "")
-+    set(CMAKE_INSTALL_PREFIX "/p/hal/private/rocm-1.6-gcc540/x86_64-w64-mingw32" CACHE PATH "")
- else()
--    set(CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "")
-+    set(CMAKE_INSTALL_PREFIX "/p/hal/private/rocm-1.6-gcc540" CACHE PATH "")
- endif()
- 
- project ( MIOpen C CXX )
- 
- enable_testing()
- 
--find_package(ROCM REQUIRED PATHS /opt/rocm)
-+find_package(ROCM REQUIRED PATHS /p/hal/private/rocm-1.6-gcc540)
- 
- include(ROCMInstallTargets)
- include(ROCMPackageConfigHelpers)
-@@ -90,7 +90,7 @@ endif()
- option(ENABLE_HIP_WORKAROUNDS Off)
- if(ENABLE_HIP_WORKAROUNDS)
-     # Add these to CMAKE_PREFIX_PATH to workaround installation problems with hip and hcc
--    list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hcc /opt/rocm/hip)
-+    list(APPEND CMAKE_PREFIX_PATH /p/hal/private/rocm-1.6-gcc540/hcc /p/hal/private/rocm-1.6-gcc540/hip)
- endif()
- 
- set( MIOPEN_BACKEND ${MIOPEN_DEFAULT_BACKEND} CACHE STRING
-@@ -108,7 +108,7 @@ if( MIOPEN_BACKEND STREQUAL "HIP" OR MIOPEN_BACKEND STREQUAL "HIPOC")
-     set(MIOPEN_BACKEND_HIP 1)
-     find_program(HIP_OC_COMPILER clang-ocl
-         PATH_SUFFIXES bin
--        PATHS /opt/rocm
-+        PATHS /p/hal/private/rocm-1.6-gcc540
-     )
-     if(HIP_OC_COMPILER)
-         message(STATUS "hip compiler: ${HIP_OC_COMPILER}")
 @@ -117,24 +117,26 @@ if( MIOPEN_BACKEND STREQUAL "HIP" OR MIOPEN_BACKEND STREQUAL "HIPOC")
          message(FATAL_ERROR "clang-ocl not found")
      endif()
      
--    find_package(hip REQUIRED PATHS /opt/rocm)
-+    find_package(hip REQUIRED PATHS /p/hal/private/rocm-1.6-gcc540)
+     find_package(hip REQUIRED PATHS /opt/rocm)
      link_libraries(stdc++)
      # A hack to make this work without the device enumerator
 -    link_libraries(-amdgpu-target=gfx803 -amdgpu-target=gfx900 -Wno-unused-command-line-argument)
@@ -58,16 +19,14 @@ index f565a52..3973652 100644
  # Online assembler
  find_program(MIOPEN_AMDGCN_ASSEMBLER
      NAMES clang
--    PATHS ${MIOPEN_AMDGCN_ASSEMBLER_PATH} /opt/rocm
-+    PATHS ${MIOPEN_AMDGCN_ASSEMBLER_PATH} /p/hal/private/rocm-1.6-gcc540
+     PATHS ${MIOPEN_AMDGCN_ASSEMBLER_PATH} /opt/rocm
      PATH_SUFFIXES /opencl/bin/x86_64
      NO_DEFAULT_PATH
  )
  message(STATUS "AMDGCN assembler: ${MIOPEN_AMDGCN_ASSEMBLER}")
  
  # miopengemm
--find_package(miopengemm PATHS /opt/rocm)
-+find_package(miopengemm PATHS /p/hal/private/rocm-1.6-gcc540)
+ find_package(miopengemm PATHS /opt/rocm)
  if(miopengemm_FOUND)
      message(STATUS "Build with miopengemm")
      set(MIOPEN_USE_MIOPENGEMM 1)
