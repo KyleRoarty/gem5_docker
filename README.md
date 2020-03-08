@@ -27,6 +27,26 @@ scons -j$(nproc) build/GCN3_X86/gem5.opt --ignore-style
 When running the container in the background:
 `docker exec -w/gem5 <container_name> scons -j$(nproc) /sim/gem5/build/GCN3_X86/gem5.opt --ignore-style`
 
+### Working applications
+
+The following are a list of applications that have been tested to run in gem5 using this dockerfile. Because the current model in the GPU staging branch is an APU, the majority of these applications are patched to remove unneeded hipMemcpy calls.
+
+Repo | Application | Notes
+--- | --- |  ---
+[DNNMark](https://github.com/doody1986/DNNMark.git) | dnnmark_test_fwd_softmax | Patch in tests dir, requires pre-generated MIOpen kernels
+[DeepBench](https://github.com/baidu-research/DeepBench) | rnn_bench | Requires pre-generated MIOpen kernels, uses rocBLAS
+|| conv_bench | Slow. Requires pre-generated MIOpen kernels, uses MIOpenGEMM. WIP patch to use rocBLAS instead
+[HIP samples](https://github.com/ROCm-Developer-Tools/HIP) | square | Patch in tests dir
+|| bit_extract | In HIP/samples/0_intro. This and all following applications are pre-patched from hip.patch file
+|| MatrixTranspose | This and all following applications are in HIP/samples/2_Cookbook
+|| hipEvent
+|| Profiler
+|| shfl | [Requires patch for gem5](https://gem5-review.googlesource.com/c/amd/gem5/+/26443)
+|| 2dshfl | [Requires patch for gem5](https://gem5-review.googlesource.com/c/amd/gem5/+/26443)
+|| dynamic_shared
+|| unroll
+|| inline_asm
+
 ### Tests
 
 ```
