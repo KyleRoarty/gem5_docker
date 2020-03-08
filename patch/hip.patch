@@ -1,8 +1,737 @@
+diff --git a/samples/0_Intro/bit_extract/bit_extract.cpp b/samples/0_Intro/bit_extract/bit_extract.cpp
+index a30f2d0..fe399cc 100644
+--- a/samples/0_Intro/bit_extract/bit_extract.cpp
++++ b/samples/0_Intro/bit_extract/bit_extract.cpp
+@@ -27,6 +27,7 @@ THE SOFTWARE.
+ #include <hc.hpp>
+ #endif
+ 
++//#define DGPU
+ 
+ #define CHECK(cmd) \
+ {\
+@@ -55,7 +56,9 @@ bit_extract_kernel(hipLaunchParm lp, uint32_t *C_d, const uint32_t *A_d, size_t
+ 
+ int main(int argc, char *argv[])
+ {
++#ifdef DGPU
+     uint32_t *A_d, *C_d;
++#endif
+     uint32_t *A_h, *C_h;
+     size_t N = 1000000;
+     size_t Nbytes = N * sizeof(uint32_t);
+@@ -78,20 +81,26 @@ int main(int argc, char *argv[])
+         A_h[i] = i;
+     }
+ 
++#ifdef DGPU
+     printf ("info: allocate device mem (%6.2f MB)\n", 2*Nbytes/1024.0/1024.0);
+     CHECK(hipMalloc(&A_d, Nbytes));
+     CHECK(hipMalloc(&C_d, Nbytes));
+ 
+     printf ("info: copy Host2Device\n");
+     CHECK ( hipMemcpy(A_d, A_h, Nbytes, hipMemcpyHostToDevice));
++#endif
+ 
+     printf ("info: launch 'bit_extract_kernel' \n");
+     const unsigned blocks = 512;
+     const unsigned threadsPerBlock = 256;
++#ifdef DGPU
+     hipLaunchKernel(bit_extract_kernel, dim3(blocks), dim3(threadsPerBlock), 0, 0,   C_d, A_d, N);
+ 
+     printf ("info: copy Device2Host\n");
+     CHECK ( hipMemcpy(C_h, C_d, Nbytes, hipMemcpyDeviceToHost));
++#else // APU
++    hipLaunchKernel(bit_extract_kernel, dim3(blocks), dim3(threadsPerBlock), 0, 0,   C_h, A_h, N);
++#endif
+ 
+     printf ("info: check result\n");
+     for (size_t i=0; i<N; i++)  {
+diff --git a/samples/2_Cookbook/0_MatrixTranspose/MatrixTranspose.cpp b/samples/2_Cookbook/0_MatrixTranspose/MatrixTranspose.cpp
+index 264fcbe..08b2609 100644
+--- a/samples/2_Cookbook/0_MatrixTranspose/MatrixTranspose.cpp
++++ b/samples/2_Cookbook/0_MatrixTranspose/MatrixTranspose.cpp
+@@ -35,6 +35,8 @@ THE SOFTWARE.
+ #define THREADS_PER_BLOCK_Y  4
+ #define THREADS_PER_BLOCK_Z  1
+ 
++//#define DGPU
++
+ // Device (Kernel) function, it must be void
+ // hipLaunchParm provides the execution configuration
+ __global__ void matrixTranspose(hipLaunchParm lp,
+@@ -69,8 +71,10 @@ int main() {
+   float* TransposeMatrix;
+   float* cpuTransposeMatrix;
+ 
++#ifdef DGPU
+   float* gpuMatrix;
+   float* gpuTransposeMatrix;
++#endif
+ 
+   hipDeviceProp_t devProp;
+   hipGetDeviceProperties(&devProp, 0);
+@@ -89,6 +93,7 @@ int main() {
+     Matrix[i] = (float)i*10.0f;
+   }
+ 
++#ifdef DGPU
+   // allocate the memory on the device side
+   hipMalloc((void**)&gpuMatrix, NUM * sizeof(float));
+   hipMalloc((void**)&gpuTransposeMatrix, NUM * sizeof(float));
+@@ -105,6 +110,14 @@ int main() {
+ 
+   // Memory transfer from device to host
+   hipMemcpy(TransposeMatrix, gpuTransposeMatrix, NUM*sizeof(float), hipMemcpyDeviceToHost);
++#else // APU
++  // Launching kernel from host
++  hipLaunchKernel(matrixTranspose,
++                  dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
++                  dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
++                  0, 0,
++                  TransposeMatrix, Matrix, WIDTH);
++#endif
+ 
+   // CPU MatrixTranspose computation
+   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, WIDTH);
+@@ -123,9 +136,11 @@ int main() {
+     printf ("PASSED!\n");
+   }
+ 
++#ifdef DGPU
+   //free the resources on device side
+   hipFree(gpuMatrix);
+   hipFree(gpuTransposeMatrix);
++#endif
+ 
+   //free the resources on host side
+   free(Matrix);
+diff --git a/samples/2_Cookbook/10_inline_asm/inline_asm.cpp b/samples/2_Cookbook/10_inline_asm/inline_asm.cpp
+index 2b4fc3d..066180e 100644
+--- a/samples/2_Cookbook/10_inline_asm/inline_asm.cpp
++++ b/samples/2_Cookbook/10_inline_asm/inline_asm.cpp
+@@ -33,6 +33,8 @@ THE SOFTWARE.
+ #define THREADS_PER_BLOCK_Y  4
+ #define THREADS_PER_BLOCK_Z  1
+ 
++//#define DGPU
++
+ // Device (Kernel) function, it must be void
+ // hipLaunchParm provides the execution configuration
+ __global__ void matrixTranspose(hipLaunchParm lp,
+@@ -68,8 +70,10 @@ int main() {
+   float* TransposeMatrix;
+   float* cpuTransposeMatrix;
+ 
++#ifdef DGPU
+   float* gpuMatrix;
+   float* gpuTransposeMatrix;
++#endif
+ 
+   hipDeviceProp_t devProp;
+   hipGetDeviceProperties(&devProp, 0);
+@@ -93,6 +97,7 @@ int main() {
+     Matrix[i] = (float)i*10.0f;
+   }
+ 
++#ifdef DGPU
+   // allocate the memory on the device side
+   hipMalloc((void**)&gpuMatrix, NUM * sizeof(float));
+   hipMalloc((void**)&gpuTransposeMatrix, NUM * sizeof(float));
+@@ -110,16 +115,26 @@ int main() {
+   hipEventElapsedTime(&eventMs, start, stop);
+ 
+   printf ("hipMemcpyHostToDevice time taken  = %6.3fms\n", eventMs);
++#endif
+ 
+   // Record the start event
+   hipEventRecord(start, NULL);
+ 
++#ifdef DGPU
+   // Lauching kernel from host
+   hipLaunchKernel(matrixTranspose,
+                   dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
+                   dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
+                   0, 0,
+                   gpuTransposeMatrix , gpuMatrix, WIDTH);
++#else
++  // Lauching kernel from host
++  hipLaunchKernel(matrixTranspose,
++                  dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
++                  dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
++                  0, 0,
++                  TransposeMatrix , Matrix, WIDTH);
++#endif
+ 
+   // Record the stop event
+   hipEventRecord(stop, NULL);
+@@ -129,6 +144,7 @@ int main() {
+ 
+   printf ("kernel Execution time             = %6.3fms\n", eventMs);
+ 
++#ifdef DGPU
+   // Record the start event
+   hipEventRecord(start, NULL);
+ 
+@@ -142,6 +158,7 @@ int main() {
+   hipEventElapsedTime(&eventMs, start, stop);
+ 
+   printf ("hipMemcpyDeviceToHost time taken  = %6.3fms\n", eventMs);
++#endif
+ 
+   // CPU MatrixTranspose computation
+   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, WIDTH);
+@@ -161,9 +178,11 @@ int main() {
+     printf ("PASSED!\n");
+   }
+ 
++#ifdef DGPU
+   //free the resources on device side
+   hipFree(gpuMatrix);
+   hipFree(gpuTransposeMatrix);
++#endif
+ 
+   //free the resources on host side
+   free(Matrix);
+diff --git a/samples/2_Cookbook/1_hipEvent/hipEvent.cpp b/samples/2_Cookbook/1_hipEvent/hipEvent.cpp
+index f2aea14..61eee1d 100644
+--- a/samples/2_Cookbook/1_hipEvent/hipEvent.cpp
++++ b/samples/2_Cookbook/1_hipEvent/hipEvent.cpp
+@@ -33,6 +33,8 @@ THE SOFTWARE.
+ #define THREADS_PER_BLOCK_Y  4
+ #define THREADS_PER_BLOCK_Z  1
+ 
++//#define DGPU
++
+ // Device (Kernel) function, it must be void
+ // hipLaunchParm provides the execution configuration
+ __global__ void matrixTranspose(hipLaunchParm lp,
+@@ -67,8 +69,10 @@ int main() {
+   float* TransposeMatrix;
+   float* cpuTransposeMatrix;
+ 
++#ifdef DGPU
+   float* gpuMatrix;
+   float* gpuTransposeMatrix;
++#endif
+ 
+   hipDeviceProp_t devProp;
+   hipGetDeviceProperties(&devProp, 0);
+@@ -92,6 +96,7 @@ int main() {
+     Matrix[i] = (float)i*10.0f;
+   }
+ 
++#ifdef DGPU
+   // allocate the memory on the device side
+   hipMalloc((void**)&gpuMatrix, NUM * sizeof(float));
+   hipMalloc((void**)&gpuTransposeMatrix, NUM * sizeof(float));
+@@ -109,16 +114,26 @@ int main() {
+   hipEventElapsedTime(&eventMs, start, stop);
+ 
+   printf ("hipMemcpyHostToDevice time taken  = %6.3fms\n", eventMs);
++#endif
+ 
+   // Record the start event
+   hipEventRecord(start, NULL);
+ 
++#ifdef DGPU
+   // Lauching kernel from host
+   hipLaunchKernel(matrixTranspose,
+                   dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
+                   dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
+                   0, 0,
+                   gpuTransposeMatrix , gpuMatrix, WIDTH);
++#else // APU
++  // Lauching kernel from host
++  hipLaunchKernel(matrixTranspose,
++                  dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
++                  dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
++                  0, 0,
++                  TransposeMatrix , Matrix, WIDTH);
++#endif
+ 
+   // Record the stop event
+   hipEventRecord(stop, NULL);
+@@ -128,6 +143,7 @@ int main() {
+ 
+   printf ("kernel Execution time             = %6.3fms\n", eventMs);
+ 
++#ifdef DGPU
+   // Record the start event
+   hipEventRecord(start, NULL);
+ 
+@@ -141,6 +157,7 @@ int main() {
+   hipEventElapsedTime(&eventMs, start, stop);
+ 
+   printf ("hipMemcpyDeviceToHost time taken  = %6.3fms\n", eventMs);
++#endif
+ 
+   // CPU MatrixTranspose computation
+   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, WIDTH);
+@@ -159,9 +176,11 @@ int main() {
+     printf ("PASSED!\n");
+   }
+ 
++#ifdef DGPU
+   //free the resources on device side
+   hipFree(gpuMatrix);
+   hipFree(gpuTransposeMatrix);
++#endif
+ 
+   //free the resources on host side
+   free(Matrix);
+diff --git a/samples/2_Cookbook/2_Profiler/MatrixTranspose.cpp b/samples/2_Cookbook/2_Profiler/MatrixTranspose.cpp
+index 3747bb4..ab1c544 100644
+--- a/samples/2_Cookbook/2_Profiler/MatrixTranspose.cpp
++++ b/samples/2_Cookbook/2_Profiler/MatrixTranspose.cpp
+@@ -36,6 +36,8 @@ THE SOFTWARE.
+ 
+ #define ITERATIONS 10
+ 
++//#define DGPU
++
+ // Cmdline parms to control start and stop triggers
+ int startTriggerIteration=-1;
+ int stopTriggerIteration=-1;
+@@ -91,7 +93,7 @@ void runGPU(float *Matrix, float *TransposeMatrix,
+     hipEventCreate(&start);
+     hipEventCreate(&stop);
+ 
+-
++#ifdef DGPU
+     // Record the start event
+     hipEventRecord(start, NULL);
+ 
+@@ -105,16 +107,26 @@ void runGPU(float *Matrix, float *TransposeMatrix,
+     hipEventElapsedTime(&eventMs, start, stop);
+ 
+     printf ("hipMemcpyHostToDevice time taken  = %6.3fms\n", eventMs);
++#endif
+ 
+     // Record the start event
+     hipEventRecord(start, NULL);
+ 
++#ifdef DGPU
+     // Lauching kernel from host
+     hipLaunchKernel(matrixTranspose,
+                     dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
+                     dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
+                     0, 0,
+                     gpuTransposeMatrix , gpuMatrix, WIDTH);
++#else
++    // Lauching kernel from host
++    hipLaunchKernel(matrixTranspose,
++                    dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
++                    dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
++                    0, 0,
++                    TransposeMatrix , Matrix, WIDTH);
++#endif
+ 
+     // Record the stop event
+     hipEventRecord(stop, NULL);
+@@ -123,6 +135,7 @@ void runGPU(float *Matrix, float *TransposeMatrix,
+ 
+     printf ("kernel Execution time             = %6.3fms\n", eventMs);
+ 
++#ifdef DGPU
+     // Record the start event
+     hipEventRecord(start, NULL);
+ 
+@@ -136,6 +149,7 @@ void runGPU(float *Matrix, float *TransposeMatrix,
+     hipEventElapsedTime(&eventMs, start, stop);
+ 
+     printf ("hipMemcpyDeviceToHost time taken  = %6.3fms\n", eventMs);
++#endif
+   }
+ };
+ 
+@@ -183,9 +197,11 @@ int main(int argc, char *argv[]) {
+       }
+ 
+ 
++#ifdef DGPU
+       // allocate the memory on the device side
+       hipMalloc((void**)&gpuMatrix, NUM * sizeof(float));
+       hipMalloc((void**)&gpuTransposeMatrix, NUM * sizeof(float));
++#endif
+ 
+       // FYI, the scoped-marker will be destroyed here when the scope exits, and will record its "end" timestamp.
+   }
+@@ -217,9 +233,11 @@ int main(int argc, char *argv[]) {
+     printf ("PASSED!\n");
+   }
+ 
++#ifdef DGPU
+   //free the resources on device side
+   hipFree(gpuMatrix);
+   hipFree(gpuTransposeMatrix);
++#endif
+ 
+   //free the resources on host side
+   free(Matrix);
+diff --git a/samples/2_Cookbook/3_shared_memory/sharedMemory.cpp b/samples/2_Cookbook/3_shared_memory/sharedMemory.cpp
+index 9b51aba..bf8992f 100644
+--- a/samples/2_Cookbook/3_shared_memory/sharedMemory.cpp
++++ b/samples/2_Cookbook/3_shared_memory/sharedMemory.cpp
+@@ -34,6 +34,8 @@ THE SOFTWARE.
+ #define THREADS_PER_BLOCK_Y  4
+ #define THREADS_PER_BLOCK_Z  1
+ 
++//#define DGPU
++
+ // Device (Kernel) function, it must be void
+ // hipLaunchParm provides the execution configuration
+ __global__ void matrixTranspose(hipLaunchParm lp,
+@@ -74,8 +76,10 @@ int main() {
+   float* TransposeMatrix;
+   float* cpuTransposeMatrix;
+ 
++#ifdef DGPU
+   float* gpuMatrix;
+   float* gpuTransposeMatrix;
++#endif
+ 
+   hipDeviceProp_t devProp;
+   hipGetDeviceProperties(&devProp, 0);
+@@ -94,6 +98,7 @@ int main() {
+     Matrix[i] = (float)i*10.0f;
+   }
+ 
++#ifdef DGPU
+   // allocate the memory on the device side
+   hipMalloc((void**)&gpuMatrix, NUM * sizeof(float));
+   hipMalloc((void**)&gpuTransposeMatrix, NUM * sizeof(float));
+@@ -110,6 +115,14 @@ int main() {
+ 
+   // Memory transfer from device to host
+   hipMemcpy(TransposeMatrix, gpuTransposeMatrix, NUM*sizeof(float), hipMemcpyDeviceToHost);
++#else // APU
++  // Lauching kernel from host
++  hipLaunchKernel(matrixTranspose,
++                  dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
++                  dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
++                  0, 0,
++                  TransposeMatrix , Matrix, WIDTH);
++#endif
+ 
+   // CPU MatrixTranspose computation
+   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, WIDTH);
+@@ -129,9 +142,11 @@ int main() {
+     printf ("PASSED!\n");
+   }
+ 
++#ifdef DGPU
+   //free the resources on device side
+   hipFree(gpuMatrix);
+   hipFree(gpuTransposeMatrix);
++#endif
+ 
+   //free the resources on host side
+   free(Matrix);
+diff --git a/samples/2_Cookbook/4_shfl/shfl.cpp b/samples/2_Cookbook/4_shfl/shfl.cpp
+index e0f4c21..224498d 100644
+--- a/samples/2_Cookbook/4_shfl/shfl.cpp
++++ b/samples/2_Cookbook/4_shfl/shfl.cpp
+@@ -34,6 +34,8 @@ THE SOFTWARE.
+ #define THREADS_PER_BLOCK_Y  4
+ #define THREADS_PER_BLOCK_Z  1
+ 
++//#define DGPU
++
+ // Device (Kernel) function, it must be void
+ // hipLaunchParm provides the execution configuration
+ __global__ void matrixTranspose(hipLaunchParm lp,
+@@ -73,8 +75,10 @@ int main() {
+   float* TransposeMatrix;
+   float* cpuTransposeMatrix;
+ 
++#ifdef DGPU
+   float* gpuMatrix;
+   float* gpuTransposeMatrix;
++#endif
+ 
+   hipDeviceProp_t devProp;
+   hipGetDeviceProperties(&devProp, 0);
+@@ -93,6 +97,7 @@ int main() {
+     Matrix[i] = (float)i*10.0f;
+   }
+ 
++#ifdef DGPU
+   // allocate the memory on the device side
+   hipMalloc((void**)&gpuMatrix, NUM * sizeof(float));
+   hipMalloc((void**)&gpuTransposeMatrix, NUM * sizeof(float));
+@@ -109,6 +114,14 @@ int main() {
+ 
+   // Memory transfer from device to host
+   hipMemcpy(TransposeMatrix, gpuTransposeMatrix, NUM*sizeof(float), hipMemcpyDeviceToHost);
++#else // APU
++  // Lauching kernel from host
++  hipLaunchKernel(matrixTranspose,
++                  dim3(1),
++                  dim3(THREADS_PER_BLOCK_X * THREADS_PER_BLOCK_Y),
++                  0, 0,
++                  TransposeMatrix , Matrix, WIDTH);
++#endif
+ 
+   // CPU MatrixTranspose computation
+   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, WIDTH);
+@@ -128,9 +141,11 @@ int main() {
+     printf ("PASSED!\n");
+   }
+ 
++#ifdef DGPU
+   //free the resources on device side
+   hipFree(gpuMatrix);
+   hipFree(gpuTransposeMatrix);
++#endif
+ 
+   //free the resources on host side
+   free(Matrix);
+diff --git a/samples/2_Cookbook/5_2dshfl/2dshfl.cpp b/samples/2_Cookbook/5_2dshfl/2dshfl.cpp
+index 1b22a0c..d08933c 100644
+--- a/samples/2_Cookbook/5_2dshfl/2dshfl.cpp
++++ b/samples/2_Cookbook/5_2dshfl/2dshfl.cpp
+@@ -34,6 +34,8 @@ THE SOFTWARE.
+ #define THREADS_PER_BLOCK_Y  4
+ #define THREADS_PER_BLOCK_Z  1
+ 
++//#define DGPU
++
+ // Device (Kernel) function, it must be void
+ // hipLaunchParm provides the execution configuration
+ __global__ void matrixTranspose(hipLaunchParm lp,
+@@ -69,8 +71,10 @@ int main() {
+   float* TransposeMatrix;
+   float* cpuTransposeMatrix;
+ 
++#ifdef DGPU
+   float* gpuMatrix;
+   float* gpuTransposeMatrix;
++#endif
+ 
+   hipDeviceProp_t devProp;
+   hipGetDeviceProperties(&devProp, 0);
+@@ -89,6 +93,7 @@ int main() {
+     Matrix[i] = (float)i*10.0f;
+   }
+ 
++#ifdef DGPU
+   // allocate the memory on the device side
+   hipMalloc((void**)&gpuMatrix, NUM * sizeof(float));
+   hipMalloc((void**)&gpuTransposeMatrix, NUM * sizeof(float));
+@@ -105,6 +110,14 @@ int main() {
+ 
+   // Memory transfer from device to host
+   hipMemcpy(TransposeMatrix, gpuTransposeMatrix, NUM*sizeof(float), hipMemcpyDeviceToHost);
++#else // APU
++  // Lauching kernel from host
++  hipLaunchKernel(matrixTranspose,
++                  dim3(1),
++                  dim3(THREADS_PER_BLOCK_X , THREADS_PER_BLOCK_Y),
++                  0, 0,
++                  TransposeMatrix , Matrix, WIDTH);
++#endif
+ 
+   // CPU MatrixTranspose computation
+   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, WIDTH);
+@@ -124,9 +137,11 @@ int main() {
+     printf ("PASSED!\n");
+   }
+ 
++#ifdef DGPU
+   //free the resources on device side
+   hipFree(gpuMatrix);
+   hipFree(gpuTransposeMatrix);
++#endif
+ 
+   //free the resources on host side
+   free(Matrix);
+diff --git a/samples/2_Cookbook/6_dynamic_shared/dynamic_shared.cpp b/samples/2_Cookbook/6_dynamic_shared/dynamic_shared.cpp
+index 22d7eb9..ce142f8 100644
+--- a/samples/2_Cookbook/6_dynamic_shared/dynamic_shared.cpp
++++ b/samples/2_Cookbook/6_dynamic_shared/dynamic_shared.cpp
+@@ -32,6 +32,8 @@ THE SOFTWARE.
+ #define THREADS_PER_BLOCK_Y  4
+ #define THREADS_PER_BLOCK_Z  1
+ 
++//#ifdef DGPU
++
+ // Device (Kernel) function, it must be void
+ // hipLaunchParm provides the execution configuration
+ __global__ void matrixTranspose(hipLaunchParm lp,
+@@ -73,8 +75,10 @@ int main() {
+   float* TransposeMatrix;
+   float* cpuTransposeMatrix;
+ 
++#ifdef DGPU
+   float* gpuMatrix;
+   float* gpuTransposeMatrix;
++#endif
+ 
+   hipDeviceProp_t devProp;
+   hipGetDeviceProperties(&devProp, 0);
+@@ -93,6 +97,7 @@ int main() {
+     Matrix[i] = (float)i*10.0f;
+   }
+ 
++#ifdef DGPU
+   // allocate the memory on the device side
+   hipMalloc((void**)&gpuMatrix, NUM * sizeof(float));
+   hipMalloc((void**)&gpuTransposeMatrix, NUM * sizeof(float));
+@@ -109,6 +114,14 @@ int main() {
+ 
+   // Memory transfer from device to host
+   hipMemcpy(TransposeMatrix, gpuTransposeMatrix, NUM*sizeof(float), hipMemcpyDeviceToHost);
++#else // APU
++  // Lauching kernel from host
++  hipLaunchKernel(matrixTranspose,
++                  dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
++                  dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
++                  sizeof(float)*WIDTH*WIDTH, 0,
++                  TransposeMatrix , Matrix, WIDTH);
++#endif
+ 
+   // CPU MatrixTranspose computation
+   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, WIDTH);
+@@ -128,9 +141,11 @@ int main() {
+     printf ("dynamic_shared PASSED!\n");
+   }
+ 
++#ifdef DGPU
+   //free the resources on device side
+   hipFree(gpuMatrix);
+   hipFree(gpuTransposeMatrix);
++#endif
+ 
+   //free the resources on host side
+   free(Matrix);
+diff --git a/samples/2_Cookbook/7_streams/stream.cpp b/samples/2_Cookbook/7_streams/stream.cpp
+index 9c6f828..32b511f 100644
+--- a/samples/2_Cookbook/7_streams/stream.cpp
++++ b/samples/2_Cookbook/7_streams/stream.cpp
+@@ -28,6 +28,8 @@ THE SOFTWARE.
+ #define THREADS_PER_BLOCK_Y  4
+ #define THREADS_PER_BLOCK_Z  1
+ 
++//#define DGPU
++
+ using namespace std;
+ 
+ __global__ void matrixTranspose_static_shared(hipLaunchParm lp,
+@@ -73,6 +75,7 @@ void MultipleStream (float **data, float *randArray, float **gpuTransposeMatrix,
+     for(int i=0;i<num_streams;i++)
+         hipStreamCreate(&streams[i]);
+ 
++#ifdef DGPU
+     for(int i=0;i<num_streams;i++)
+     {
+         hipMalloc((void**)&data[i], NUM * sizeof(float));
+@@ -93,6 +96,19 @@ void MultipleStream (float **data, float *randArray, float **gpuTransposeMatrix,
+ 
+     for(int i=0;i<num_streams;i++)
+     hipMemcpyAsync(TransposeMatrix[i], gpuTransposeMatrix[i], NUM*sizeof(float), hipMemcpyDeviceToHost, streams[i]);
++#else // APU
++    hipLaunchKernel(matrixTranspose_static_shared,
++                    dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
++                    dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
++                    0, streams[0],
++                    TransposeMatrix[0], randArray, width);
++
++    hipLaunchKernel(matrixTranspose_dynamic_shared,
++                    dim3(WIDTH/THREADS_PER_BLOCK_X, WIDTH/THREADS_PER_BLOCK_Y),
++                    dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
++                    sizeof(float)*WIDTH*WIDTH, streams[1],
++                    TransposeMatrix[1], randArray, width);
++#endif
+ 
+ }
+ 
+@@ -109,8 +125,10 @@ int main(){
+     TransposeMatrix[0] = (float*)malloc(NUM * sizeof(float));
+     TransposeMatrix[1] = (float*)malloc(NUM * sizeof(float));
+ 
++#ifdef DGPU
+     hipMalloc((void**)&gpuTransposeMatrix[0], NUM * sizeof(float));
+     hipMalloc((void**)&gpuTransposeMatrix[1], NUM * sizeof(float));
++#endif
+ 
+     for(int i = 0; i < NUM; i++)
+     {
+@@ -138,8 +156,10 @@ int main(){
+ 
+     free(randArray);
+     for(int i=0;i<2;i++){
++#ifdef DGPU
+        hipFree(data[i]);
+        hipFree(gpuTransposeMatrix[i]);
++#endif
+        free(TransposeMatrix[i]);
+     }
+ 
+diff --git a/samples/2_Cookbook/9_unroll/unroll.cpp b/samples/2_Cookbook/9_unroll/unroll.cpp
+index 22f1c75..7986125 100644
+--- a/samples/2_Cookbook/9_unroll/unroll.cpp
++++ b/samples/2_Cookbook/9_unroll/unroll.cpp
+@@ -34,6 +34,8 @@ THE SOFTWARE.
+ #define THREADS_PER_BLOCK_Y  4
+ #define THREADS_PER_BLOCK_Z  1
+ 
++//#define DGPU
++
+ // Device (Kernel) function, it must be void
+ // hipLaunchParm provides the execution configuration
+ __global__ void matrixTranspose(hipLaunchParm lp,
+@@ -73,8 +75,10 @@ int main() {
+   float* TransposeMatrix;
+   float* cpuTransposeMatrix;
+ 
++#ifdef DGPU
+   float* gpuMatrix;
+   float* gpuTransposeMatrix;
++#endif
+ 
+   hipDeviceProp_t devProp;
+   hipGetDeviceProperties(&devProp, 0);
+@@ -93,6 +97,7 @@ int main() {
+     Matrix[i] = (float)i*10.0f;
+   }
+ 
++#ifdef DGPU
+   // allocate the memory on the device side
+   hipMalloc((void**)&gpuMatrix, NUM * sizeof(float));
+   hipMalloc((void**)&gpuTransposeMatrix, NUM * sizeof(float));
+@@ -109,6 +114,14 @@ int main() {
+ 
+   // Memory transfer from device to host
+   hipMemcpy(TransposeMatrix, gpuTransposeMatrix, NUM*sizeof(float), hipMemcpyDeviceToHost);
++#else // APU
++  // Lauching kernel from host
++  hipLaunchKernel(matrixTranspose,
++                  dim3(1),
++                  dim3(THREADS_PER_BLOCK_X * THREADS_PER_BLOCK_Y),
++                  0, 0,
++                  TransposeMatrix , Matrix, WIDTH);
++#endif
+ 
+   // CPU MatrixTranspose computation
+   matrixTransposeCPUReference(cpuTransposeMatrix, Matrix, WIDTH);
+@@ -128,9 +141,11 @@ int main() {
+     printf ("PASSED!\n");
+   }
+ 
++#ifdef DGPU
+   //free the resources on device side
+   hipFree(gpuMatrix);
+   hipFree(gpuTransposeMatrix);
++#endif
+ 
+   //free the resources on host side
+   free(Matrix);
 diff --git a/src/hip_hcc.cpp b/src/hip_hcc.cpp
-index 2d67c31..6c6e299 100644
+index 2d67c31..e650314 100644
 --- a/src/hip_hcc.cpp
 +++ b/src/hip_hcc.cpp
-@@ -1891,6 +1889,7 @@ bool getTailoredPtrInfo(hc::AmPointerInfo *ptrInfo, const void * ptr, size_t siz
+@@ -1891,6 +1891,7 @@ bool getTailoredPtrInfo(hc::AmPointerInfo *ptrInfo, const void * ptr, size_t siz
  // TODO - remove kind parm from here or use it below?
  void ihipStream_t::locked_copySync(void* dst, const void* src, size_t sizeBytes, unsigned kind, bool resolveOn)
  {
@@ -10,7 +739,7 @@ index 2d67c31..6c6e299 100644
      ihipCtx_t *ctx = this->getCtx();
      const ihipDevice_t *device = ctx->getDevice();
  
-@@ -1937,6 +1936,10 @@ void ihipStream_t::locked_copySync(void* dst, const void* src, size_t sizeBytes,
+@@ -1937,6 +1938,10 @@ void ihipStream_t::locked_copySync(void* dst, const void* src, size_t sizeBytes,
  
          crit->_av.copy_ext(src, dst, sizeBytes, hcCopyDir, srcPtrInfo, dstPtrInfo, copyDevice ? &copyDevice->getDevice()->_acc : nullptr, forceUnpinnedCopy);
      }
@@ -21,7 +750,7 @@ index 2d67c31..6c6e299 100644
  }
  
  void ihipStream_t::addSymbolPtrToTracker(hc::accelerator& acc, void* ptr, size_t sizeBytes) {
-@@ -2004,7 +2007,7 @@ void ihipStream_t::lockedSymbolCopyAsync(hc::accelerator &acc, void* dst, void*
+@@ -2004,7 +2009,7 @@ void ihipStream_t::lockedSymbolCopyAsync(hc::accelerator &acc, void* dst, void*
  
  void ihipStream_t::locked_copyAsync(void* dst, const void* src, size_t sizeBytes, unsigned kind)
  {
@@ -30,7 +759,7 @@ index 2d67c31..6c6e299 100644
      const ihipCtx_t *ctx = this->getCtx();
  
      if ((ctx == nullptr) || (ctx->getDevice() == nullptr)) {
-@@ -2097,6 +2100,10 @@ void ihipStream_t::locked_copyAsync(void* dst, const void* src, size_t sizeBytes
+@@ -2097,6 +2102,10 @@ void ihipStream_t::locked_copyAsync(void* dst, const void* src, size_t sizeBytes
              crit->_av.copy_ext(src, dst, sizeBytes, hcCopyDir, srcPtrInfo, dstPtrInfo, copyDevice ? &copyDevice->getDevice()->_acc : nullptr, forceUnpinnedCopy);
          }
      }
@@ -55,7 +784,7 @@ index 4b7e533..b376bab 100644
  //---
  // Environment variables:
 diff --git a/src/hip_memory.cpp b/src/hip_memory.cpp
-index a8324c5..92b991d 100644
+index a8324c5..5d62111 100644
 --- a/src/hip_memory.cpp
 +++ b/src/hip_memory.cpp
 @@ -103,9 +103,9 @@ int sharePtr(void *ptr, ihipCtx_t *ctx, bool shareWithAll, unsigned hipFlags)
