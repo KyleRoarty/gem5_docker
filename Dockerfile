@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     findutils \
     file \
     libunwind8 \
@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     gcc-multilib \
     g++-multilib \
     git \
+    ca-certificates \
     m4 \
     scons \
     zlib1g \
@@ -25,41 +26,36 @@ RUN apt-get update && apt-get install -y \
     libpci3 \
     libelf1 \
     libelf-dev \
-    vim \
     cmake \
-    cmake-qt-gui \
-    libboost-program-options-dev \
-    gfortran \
     openssl \
     libssl-dev \
     libboost-filesystem-dev \
     libboost-system-dev \
-    libboost-dev \
-    libgflags-dev \
-    libgoogle-glog-dev
+    libboost-dev
+
 
 ARG rocm_ver=1.6.2
 
 # Get files needed for gem5, and apply patches
-RUN git clone --single-branch --branch agutierr/master-gcn3-staging https://gem5.googlesource.com/amd/gem5 && chmod 777 /gem5
-
-RUN git clone --single-branch https://github.com/ROCm-Developer-Tools/HIP/
-RUN git clone --single-branch https://github.com/ROCmSoftwarePlatform/hipBLAS/
-RUN git clone --single-branch https://github.com/ROCmSoftwarePlatform/rocBLAS/
-RUN git clone --single-branch https://github.com/ROCmSoftwarePlatform/MIOpenGEMM/
-RUN git clone --single-branch https://github.com/ROCmSoftwarePlatform/MIOpen/
-RUN git clone --single-branch https://github.com/RadeonOpenCompute/rocm-cmake/
+RUN git clone --single-branch --branch agutierr/master-gcn3-staging https://gem5.googlesource.com/amd/gem5 && chmod 777 /gem5 && \
+    git clone --single-branch https://github.com/ROCm-Developer-Tools/HIP/ && \
+    git clone --single-branch https://github.com/ROCmSoftwarePlatform/hipBLAS/ && \
+    git clone --single-branch https://github.com/ROCmSoftwarePlatform/rocBLAS/ && \
+    git clone --single-branch https://github.com/ROCmSoftwarePlatform/MIOpenGEMM/ && \
+    git clone --single-branch https://github.com/ROCmSoftwarePlatform/MIOpen/ && \
+    git clone --single-branch https://github.com/RadeonOpenCompute/rocm-cmake/ && \
+    git clone --single-branch https://github.com/rocmarchive/ROCm-Profiler.git
 
 
 # Get and apply patches to various repos
 COPY patch /patch
 
-RUN git -C /gem5/ apply /patch/gem5.patch
-RUN git -C /HIP/ checkout 0e3d824e && git -C /HIP/ apply /patch/hip.patch
-RUN git -C /hipBLAS/ checkout ee57787e && git -C /hipBLAS/ apply /patch/hipBLAS.patch
-RUN git -C /rocBLAS/ checkout cbff4b4e && git -C /rocBLAS/ apply /patch/rocBLAS.patch
-RUN git -C /MIOpenGEMM/ checkout 9547fb9e
-RUN git -C /MIOpen/ checkout a9949e30 && git -C /MIOpen/ apply /patch/miopen.patch
+RUN git -C /gem5/ apply /patch/gem5.patch && \
+    git -C /HIP/ checkout 0e3d824e && git -C /HIP/ apply /patch/hip.patch && \
+    git -C /hipBLAS/ checkout ee57787e && git -C /hipBLAS/ apply /patch/hipBLAS.patch && \
+    git -C /rocBLAS/ checkout cbff4b4e && git -C /rocBLAS/ apply /patch/rocBLAS.patch && \
+    git -C /MIOpenGEMM/ checkout 9547fb9e && \
+    git -C /MIOpen/ checkout a9949e30 && git -C /MIOpen/ apply /patch/miopen.patch
 
 # Install default ROCm programs
 RUN wget -qO- repo.radeon.com/rocm/archive/apt_${rocm_ver}.tar.bz2 \
@@ -79,6 +75,7 @@ ENV HSA_PATH ${ROCM_PATH}/hsa
 ENV HIP_PATH ${ROCM_PATH}/hip
 ENV HIP_PLATFORM hcc
 ENV PATH ${ROCM_PATH}/bin:${HCC_HOME}/bin:${HSA_PATH}/bin:${HIP_PATH}/bin:${PATH}
+ENV HCC_AMDGPU_TARGET gfx801
 
 # Create build dirs for machine learning ROCm installs
 RUN mkdir -p /HIP/build && \
@@ -94,17 +91,17 @@ RUN cmake .. && make -j$(nproc) && make install
 
 WORKDIR /rocBLAS/build
 RUN CXX=/opt/rocm/bin/hcc cmake -DCMAKE_CXX_FLAGS="--amdgpu-target=gfx801" .. && \
-    make -j$(nproc) && make install
+    make -j$(nproc) && make install && rm -rf *
 
 WORKDIR /hipBLAS/build
 RUN CXX=/opt/rocm/bin/hcc cmake -DCMAKE_CXX_FLAGS="--amdgpu-target=gfx801" .. && \
-    make -j$(nproc) && make install
+    make -j$(nproc) && make install && rm -rf *
 
 WORKDIR /rocm-cmake/build
-RUN cmake .. && cmake --build . --target install
+RUN cmake .. && cmake --build . --target install && rm -rf *
 
 WORKDIR /MIOpenGEMM/build
-RUN cmake .. && make miopengemm && make install
+RUN cmake .. && make miopengemm && make install && rm -rf *
 
 RUN mkdir -p /.cache/miopen && chmod 777 /.cache/miopen
 
@@ -117,10 +114,20 @@ RUN CXX=/opt/rocm/hcc/bin/hcc cmake \
     -DMIOPEN_CACHE_DIR=/.cache/miopen \
     -DMIOPEN_AMDGCN_ASSEMBLER_PATH=/opt/rocm/opencl/bin \
     -DCMAKE_CXX_FLAGS="-isystem /usr/include/x86_64-linux-gnu" .. && \
-    make -j$(nproc) && make install
+    make -j$(nproc) && make install && rm -rf *
+
+# Create performance DB for gfx801. May need personal dbs still
+WORKDIR /opt/rocm/miopen/share/miopen/db
+RUN ln -s gfx803_64.cd.pdb.txt gfx801_8.cd.pdb.txt && \
+    ln -s gfx803_64.cd.pdb.txt gfx801_16.cd.pdb.txt && \
+    ln -s gfx803_64.cd.pdb.txt gfx801_32.cd.pdb.txt && \
+    ln -s gfx803_64.cd.pdb.txt gfx801_64.cd.pdb.txt
+
+WORKDIR /ROCm-Profiler
+RUN dpkg -i package/rocm-profiler_4.0.6036_amd64.deb
 
 WORKDIR /gem5
-RUN scons -j$(nproc) build/GCN3_X86/gem5.opt --ignore-style
+RUN scons -sQ -j$(nproc) build/GCN3_X86/gem5.opt --ignore-style
 
 WORKDIR /
 
