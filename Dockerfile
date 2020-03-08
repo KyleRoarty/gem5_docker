@@ -127,7 +127,10 @@ WORKDIR /ROCm-Profiler
 RUN dpkg -i package/rocm-profiler_4.0.6036_amd64.deb
 
 WORKDIR /gem5
-RUN scons -sQ -j$(nproc) build/GCN3_X86/gem5.opt --ignore-style
+RUN scons -sQ -j$(nproc) build/GCN3_X86/gem5.opt --ignore-style && \
+    mv build/GCN3_X86/gem5.opt /tmp && \
+    rm -rf build && mkdir -p build/GCN3_X86 && \
+    mv /tmp/gem5.opt build/GCN3_X86/gem5.opt
 
 WORKDIR /
 

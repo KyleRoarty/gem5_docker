@@ -12,6 +12,7 @@ fi
 cd /tmp2
 # Get DNNMark and build
 git clone https://github.com/doody1986/DNNMark.git
+apt-get update && apt-get install -y --no-install-recommends libgflags-dev libgoogle-glog-dev
 cd DNNMark/
 git checkout 4c0497b
 git apply /tests/dnnmark.patch
@@ -38,12 +39,12 @@ fi
 
 cd /gem5
 
-# Validate that gem5 can be built
-scons -j$(nproc) build/GCN3_X86/gem5.opt --ignore-style
-ret=$?
-if [ $ret -ne 0 ]; then
-    exit 1
-fi
+## Validate that gem5 can be built
+#scons -j$(nproc) build/GCN3_X86/gem5.opt --ignore-style
+#ret=$?
+#if [ $ret -ne 0 ]; then
+#    exit 1
+#fi
 
 # Test that square works in gem5.
 build/GCN3_X86/gem5.opt configs/example/apu_se.py \
@@ -55,12 +56,6 @@ if [ $ret -ne 0 ]; then
 fi
 
 ls /tmp2/DNNMark
-# Run fwd_softmax benchmark with default config
-build/GCN3_X86/gem5.opt configs/example/apu_se.py \
-            -n2 \
-            --benchmark-root=/bin \
-            -cls \
-            --options="/gem5/../tmp2/DNNMark/build"
 
 build/GCN3_X86/gem5.opt configs/example/apu_se.py \
             -n2 \
