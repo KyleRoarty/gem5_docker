@@ -70,5 +70,4 @@ It's the most recent of ROCm 1.6.x that successfully runs both sets of tests acr
 It unpacks into a different directory structure than 1.6.1-1.6.4; This can be changed in the dockerfile, line 67. After ${rocm_ver}, add '/debian' and it will build
 
 ### ToDo
-* Check dependencies, if any more are needed or if any can be removed
 * Allow building with docker-compose
