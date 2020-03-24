@@ -15,18 +15,6 @@ docker run [--name <container_name>] -it [-d] <im_name> [<command>]
 If '-d' is specified, the container will run in the background \
 If '\<command\>' isn't specified, the container will run a bash shell
 
-### Building gem5 in the container
-
-To keep filesize down, gem5 is not pre-built. So on the initial run of a container, gem5 needs to be built.
-
-When attached to the container:
-```
-cd /gem5
-scons -j$(nproc) build/GCN3_X86/gem5.opt --ignore-style
-```
-When running the container in the background:
-`docker exec -w/gem5 <container_name> scons -j$(nproc) /sim/gem5/build/GCN3_X86/gem5.opt --ignore-style`
-
 ### Working applications
 
 The following are a list of applications that have been tested to run in gem5 using this dockerfile. Because the current model in the GPU staging branch is an APU, the majority of these applications are patched to remove unneeded hipMemcpy calls.
